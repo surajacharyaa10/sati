@@ -1,0 +1,17 @@
+{
+  "name": "sati-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.6",
+    "express": "^5.1.0",
+    "mongo": "^0.1.0",
+    "mongoose": "^9.11.1"
+  }
+}
