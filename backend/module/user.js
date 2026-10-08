@@ -17,8 +17,31 @@ const userSchema = new mongoose.Schema(
 			trim: true,
 			match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 		},
+		passwordHash: {
+			type: String,
+			required: true,
+			select: false,
+		},
+		avatarUrl: {
+			type: String,
+			default: null,
+		},
+		avatarPublicId: {
+			type: String,
+			default: null,
+			select: false,
+		},
 	},
-	{ timestamps: true },
+	{
+		timestamps: true,
+		toJSON: {
+			transform(_document, user) {
+				delete user.passwordHash;
+				delete user.__v;
+				return user;
+			},
+		},
+	},
 );
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);

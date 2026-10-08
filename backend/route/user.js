@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import User from '../module/user.js';
+import { hashPassword } from '../services/password.js';
 
 const router = express.Router();
 const editableFields = ['name', 'email'];
@@ -27,10 +28,25 @@ const validateUserId = (req, res, next) => {
 };
 
 router.post('/', async (req, res) => {
+	const { name, email, password } = req.body ?? {};
+
+	if (
+		typeof name !== 'string' ||
+		!name.trim() ||
+		typeof email !== 'string' ||
+		!email.trim() ||
+		typeof password !== 'string' ||
+		password.length < 8 ||
+		password.length > 128
+	) {
+		return res.status(400).json({ error: 'Enter a name, valid email, and password between 8 and 128 characters' });
+	}
+
 	try {
 		const user = await User.create({
-			name: req.body?.name,
-			email: req.body?.email,
+			name,
+			email,
+			passwordHash: await hashPassword(password),
 		});
 
 		return res.status(201).json(user);
