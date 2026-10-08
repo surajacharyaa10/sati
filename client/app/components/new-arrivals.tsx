@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { productBadgeClasses } from "@/lib/product-badges"
 import {
   Card,
   CardContent,
@@ -77,7 +78,7 @@ export function NewArrivals() {
 
   return (
     <section id="new-arrivals" className="bg-white py-14 text-[#171512] sm:py-20">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-14">
+      <div className="px-3 sm:px-4 lg:px-6">
         <div className="mb-7 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.23em] text-[#e94717]">
@@ -126,7 +127,7 @@ export function NewArrivals() {
                       sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
                       className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
                     />
-                    <Badge className="absolute left-2.5 top-2.5 rounded-none bg-white px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#171512] hover:bg-white">
+                    <Badge className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
                       {product.label}
                     </Badge>
                     <Button
@@ -162,7 +163,7 @@ export function NewArrivals() {
           })}
         </div>
 
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-14">
+      <div className="px-3 sm:px-4 lg:px-6">
         <div className="mt-9 grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:mt-12">
           <span aria-hidden="true" className="h-px bg-black/10" />
           <Link
