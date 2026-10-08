@@ -14,7 +14,7 @@ import {
 import { authApi, type AuthUser } from "@/lib/api"
 
 const navLinks = [
-  { label: "New in", href: "/women/new" },
+  { label: "New in", href: "/arrival-new" },
   { label: "Women", href: "/women" },
   { label: "Men", href: "/men" },
   { label: "Journal", href: "/journal" },

@@ -33,7 +33,7 @@ export default function Hero() {
 
             <div className="mt-7 flex flex-wrap items-center gap-5">
               <Link
-                href="/women/new"
+                href="/arrival-new"
                 className="inline-flex h-12 items-center gap-7 rounded-full bg-[#171512] px-6 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e94717]"
               >
                 Shop new arrivals

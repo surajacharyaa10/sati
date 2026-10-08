@@ -128,3 +128,19 @@
     @apply font-sans;
   }
 }
+
+@keyframes sati-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.sati-marquee-track {
+  animation: sati-marquee 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sati-marquee-track {
+    animation: none;
+  }
+}
