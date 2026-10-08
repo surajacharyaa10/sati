@@ -5,6 +5,10 @@ import dotenv from 'dotenv';
 import connectDB from './services/db.js';
 import authRoutes from './route/auth.js';
 import userRoutes from './route/user.js';
+import productRoutes from './route/products.js';
+import wishlistRoutes from './route/wishlist.js';
+import cartRoutes from './route/cart.js';
+import orderRoutes from './route/orders.js';
 
 dotenv.config();
 
@@ -18,6 +22,10 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
