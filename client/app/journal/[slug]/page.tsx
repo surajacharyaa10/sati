@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Footer } from "@/app/components/footer"
 import { Navbar } from "@/app/components/navbar"
@@ -10,7 +11,23 @@ export function generateStaticParams() {
   return journalPosts.map(({ slug }) => ({ slug }))
 }
 
-export default async function JournalArticlePage({
+export default function JournalArticlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  return (
+    <>
+      <Navbar />
+      <Suspense fallback={<JournalArticleFallback />}>
+        <JournalArticleContent params={params} />
+      </Suspense>
+      <Footer />
+    </>
+  )
+}
+
+async function JournalArticleContent({
   params,
 }: {
   params: Promise<{ slug: string }>
@@ -23,10 +40,8 @@ export default async function JournalArticlePage({
   }
 
   return (
-    <>
-      <Navbar />
-      <main className="bg-white text-[#171512]">
-        <article>
+    <main className="bg-white text-[#171512]">
+      <article>
           <header className="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
             <Link href="/journal" className="mb-10 inline-flex items-center gap-2 text-xs font-semibold text-[#706c66] transition-colors hover:text-[#e94717]">
               <ArrowLeft aria-hidden="true" className="size-4" /> Back to journal
@@ -65,9 +80,20 @@ export default async function JournalArticlePage({
               </Link>
             </div>
           </div>
-        </article>
-      </main>
-      <Footer />
-    </>
+      </article>
+    </main>
+  )
+}
+
+function JournalArticleFallback() {
+  return (
+    <main aria-busy="true" className="bg-white">
+      <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
+        <div className="h-3 w-28 animate-pulse bg-[#f0ece5]" />
+        <div className="mt-6 h-14 max-w-2xl animate-pulse bg-[#f0ece5]" />
+        <div className="mt-4 h-4 max-w-xl animate-pulse bg-[#f0ece5]" />
+      </div>
+      <div className="mx-auto aspect-video max-h-[640px] max-w-7xl animate-pulse bg-[#f0ece5]" />
+    </main>
   )
 }

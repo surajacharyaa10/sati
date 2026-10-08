@@ -12,6 +12,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { authApi, type AuthUser } from "@/lib/api"
+import { useCart } from "@/app/components/cart-provider"
+import { formatRupees } from "@/lib/currency"
 
 const navLinks = [
   { label: "New in", href: "/arrival-new" },
@@ -28,6 +30,7 @@ export function Navbar() {
   const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null)
   const [hasCheckedSession, setHasCheckedSession] = React.useState(false)
   const [isSigningOut, setIsSigningOut] = React.useState(false)
+  const { itemCount } = useCart()
 
   React.useEffect(() => {
     let isMounted = true
@@ -61,7 +64,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full">
       <div className="flex h-7 items-center justify-center bg-[#e94717] px-3 text-center text-[8px] font-bold uppercase tracking-[0.2em] text-white sm:text-[9px]">
-        Free shipping on orders over $120 — easy returns within 30 days
+        Free shipping on orders over {formatRupees(120)} — easy returns within 30 days
       </div>
 
       <div className="border-b border-black/10 bg-[#f7f3eb]">
@@ -166,13 +169,15 @@ export function Navbar() {
 
             <Link
               href="/cart"
-              aria-label="Shopping bag, 2 items"
+              aria-label={`Shopping bag, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
               className="relative inline-flex size-9 items-center justify-center rounded-full text-[#171512] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e94717]"
             >
               <ShoppingBag aria-hidden="true" className="size-[17px]" />
-              <span className="absolute right-0 top-0 flex size-[15px] items-center justify-center rounded-full bg-[#e94717] text-[8px] font-bold text-white">
-                2
-              </span>
+              {itemCount > 0 && (
+                <span className="absolute right-0 top-0 flex size-[15px] items-center justify-center rounded-full bg-[#e94717] text-[8px] font-bold text-white">
+                  {itemCount > 99 ? "99+" : itemCount}
+                </span>
+              )}
             </Link>
 
             <button

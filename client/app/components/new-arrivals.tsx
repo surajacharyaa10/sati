@@ -7,6 +7,10 @@ import { Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { productBadgeClasses } from "@/lib/product-badges"
+import { storeProducts } from "@/lib/store-products"
+import { useWishlist } from "@/lib/wishlist-store"
+import { formatRupees } from "@/lib/currency"
+import { getDiscountPercentage } from "@/lib/pricing"
 import {
   Card,
   CardContent,
@@ -18,63 +22,14 @@ import {
 const categories = ["All", "Women", "Men"] as const
 type Category = (typeof categories)[number]
 
-const products = [
-  {
-    id: "mara-utility-set",
-    name: "Mara Utility Set",
-    category: "Women",
-    details: "Women · 4 colors",
-    price: "$148",
-    label: "New",
-    image: "/assets/image3.jpeg",
-    alt: "Model in a blue tailored outfit against a teal backdrop",
-  },
-  {
-    id: "sienna-studio-set",
-    name: "Sienna Studio Set",
-    category: "Women",
-    details: "Women · 3 colors",
-    price: "$186",
-    label: "Limited",
-    image: "/assets/image7.jpeg",
-    alt: "Models wearing colorful everyday pieces outdoors",
-  },
-  {
-    id: "rio-weekend-shirt",
-    name: "Rio Weekend Shirt",
-    category: "Men",
-    details: "Men · 4 colors",
-    price: "$94",
-    label: "Bestseller",
-    image: "/assets/image9.jpeg",
-    alt: "Model wearing a relaxed green overshirt",
-  },
-  {
-    id: "nova-wide-leg-set",
-    name: "Nova Wide-Leg Set",
-    category: "Women",
-    details: "Women · 4 colors",
-    price: "$164",
-    label: "New",
-    image: "/assets/image10.jpeg",
-    alt: "Model in a vivid red matching set",
-  },
-] as const
+const products = storeProducts.slice(0, 4)
 
 export function NewArrivals() {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All")
-  const [favorites, setFavorites] = useState<string[]>([])
+  const wishlist = useWishlist()
   const visibleProducts = products.filter(
-    (product) => selectedCategory === "All" || product.category === selectedCategory,
+    (product) => selectedCategory === "All" || product.audience === selectedCategory,
   )
-
-  function toggleFavorite(productId: string) {
-    setFavorites((current) =>
-      current.includes(productId)
-        ? current.filter((favoriteId) => favoriteId !== productId)
-        : [...current, productId],
-    )
-  }
 
   return (
     <section id="new-arrivals" className="bg-white py-14 text-[#171512] sm:py-20">
@@ -111,7 +66,7 @@ export function NewArrivals() {
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-8 px-3 pt-2 sm:grid-cols-4 sm:gap-x-3 sm:gap-y-10 sm:px-4 lg:gap-x-4 lg:px-6">
           {visibleProducts.map((product) => {
-            const isFavorite = favorites.includes(product.id)
+            const isFavorite = wishlist.productIds.includes(product.id)
 
             return (
               <Card
@@ -120,14 +75,16 @@ export function NewArrivals() {
               >
                 <CardContent className="relative aspect-[4/5] p-0">
                   <div className="absolute inset-0 overflow-hidden bg-[#f2eee8]">
-                    <Image
-                      src={product.image}
-                      alt={product.alt}
-                      fill
-                      sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
-                      className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
-                    />
-                    <Badge className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
+                    <Link href={`/product/${product.id}`} aria-label={`View ${product.name} details`} className="absolute inset-0 z-0">
+                      <Image
+                        src={product.image}
+                        alt={product.alt}
+                        fill
+                        sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
+                        className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
+                      />
+                    </Link>
+                    <Badge className={`absolute left-2.5 top-2.5 z-10 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
                       {product.label}
                     </Badge>
                     <Button
@@ -136,8 +93,8 @@ export function NewArrivals() {
                       variant="outline"
                       aria-label={isFavorite ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
                       aria-pressed={isFavorite}
-                      onClick={() => toggleFavorite(product.id)}
-                      className="absolute right-2.5 top-2.5 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
+                      onClick={() => wishlist.toggle(product.id)}
+                      className="absolute right-2.5 top-2.5 z-10 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
                     >
                       <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
                     </Button>
@@ -145,11 +102,27 @@ export function NewArrivals() {
                 </CardContent>
 
                 <CardHeader className="grid-cols-[1fr_auto] gap-1 px-3 pt-3 pb-4">
-                  <CardTitle className="text-xs font-semibold sm:text-sm">{product.name}</CardTitle>
-                  <p className="shrink-0 text-xs font-semibold">{product.price}</p>
+                  <CardTitle className="text-xs font-semibold sm:text-sm">
+                    <Link href={`/product/${product.id}`} className="hover:text-[#e94717]">{product.name}</Link>
+                  </CardTitle>
+                  <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
+                    {product.originalPrice && (
+                      <del className="text-[10px] font-normal text-[#8b867e]">
+                        {formatRupees(product.originalPrice)}
+                      </del>
+                    )}
+                    <span className={product.originalPrice ? "text-[#e94717]" : ""}>
+                      {formatRupees(product.price)}
+                    </span>
+                  </div>
                   <CardDescription className="col-span-2 text-[10px] text-[#817c75]">
                     {product.details}
                   </CardDescription>
+                  {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
+                    <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
+                      {getDiscountPercentage(product.originalPrice, product.price)}% off
+                    </Badge>
+                  )}
                   <Link
                     href="/arrival-new"
                     aria-label={`View ${product.name}`}

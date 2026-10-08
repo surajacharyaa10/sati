@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/card"
 import { productBadgeClasses } from "@/lib/product-badges"
 import { storeProducts, type ProductCategory, type StoreProduct } from "@/lib/store-products"
+import { useWishlist } from "@/lib/wishlist-store"
+import { formatRupees } from "@/lib/currency"
+import { getDiscountPercentage } from "@/lib/pricing"
 
 type CollectionKind = "arrivals" | "women" | "men" | "sale"
 type SortOrder = "Featured" | "Price low" | "Price high"
@@ -88,7 +91,7 @@ export function CollectionScreen({ kind }: { kind: CollectionKind }) {
   const availableCategories = categories.filter((category) => products.some((product) => product.category === category))
   const [category, setCategory] = useState<ProductCategory | "All">("All")
   const [sortOrder, setSortOrder] = useState<SortOrder>("Featured")
-  const [favorites, setFavorites] = useState<string[]>([])
+  const wishlist = useWishlist()
 
   const filteredProducts = products.filter((product) => category === "All" || product.category === category)
   const visibleProducts = sortOrder === "Price low"
@@ -96,14 +99,6 @@ export function CollectionScreen({ kind }: { kind: CollectionKind }) {
     : sortOrder === "Price high"
       ? [...filteredProducts].sort((a, b) => b.price - a.price)
       : filteredProducts
-
-  function toggleFavorite(productId: string) {
-    setFavorites((current) =>
-      current.includes(productId)
-        ? current.filter((favoriteId) => favoriteId !== productId)
-        : [...current, productId],
-    )
-  }
 
   return (
     <main className="bg-white text-[#171512]">
@@ -184,8 +179,8 @@ export function CollectionScreen({ kind }: { kind: CollectionKind }) {
               key={product.id}
               product={product}
               label={kind === "sale" ? "Sale" : product.label}
-              isFavorite={favorites.includes(product.id)}
-              onToggleFavorite={() => toggleFavorite(product.id)}
+              isFavorite={wishlist.productIds.includes(product.id)}
+              onToggleFavorite={() => wishlist.toggle(product.id)}
             />
           ))}
         </div>
@@ -223,14 +218,16 @@ function CollectionProductCard({
     <Card className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
       <CardContent className="relative aspect-[4/5] p-0">
         <div className="absolute inset-0 overflow-hidden bg-[#f2eee8]">
-          <Image
-            src={product.image}
-            alt={product.alt}
-            fill
-            sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
-            className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
-          />
-          <Badge className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[label]}`}>
+          <Link href={`/product/${product.id}`} aria-label={`View ${product.name} details`} className="absolute inset-0 z-0">
+            <Image
+              src={product.image}
+              alt={product.alt}
+              fill
+              sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
+              className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
+            />
+          </Link>
+          <Badge className={`absolute left-2.5 top-2.5 z-10 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[label]}`}>
             {label}
           </Badge>
           <Button
@@ -240,21 +237,28 @@ function CollectionProductCard({
             aria-label={isFavorite ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
             aria-pressed={isFavorite}
             onClick={onToggleFavorite}
-            className="absolute right-2.5 top-2.5 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
+            className="absolute right-2.5 top-2.5 z-10 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
           >
             <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
           </Button>
         </div>
       </CardContent>
       <CardHeader className="grid-cols-[1fr_auto] gap-1 px-3 pt-3 pb-4">
-        <CardTitle className="text-xs font-semibold sm:text-sm">{product.name}</CardTitle>
-        <div className="flex items-start gap-2 text-xs font-semibold">
-          <span className={product.originalPrice ? "text-[#e94717]" : ""}>${product.price}</span>
-          {product.originalPrice && <del className="text-[10px] font-normal text-[#8b867e]">${product.originalPrice}</del>}
+        <CardTitle className="text-xs font-semibold sm:text-sm">
+          <Link href={`/product/${product.id}`} className="hover:text-[#e94717]">{product.name}</Link>
+        </CardTitle>
+        <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
+          {product.originalPrice && <del className="text-[10px] font-normal text-[#8b867e]">{formatRupees(product.originalPrice)}</del>}
+          <span className={product.originalPrice ? "text-[#e94717]" : ""}>{formatRupees(product.price)}</span>
         </div>
         <CardDescription className="col-span-2 text-[10px] text-[#817c75]">
           {product.details}
         </CardDescription>
+        {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
+          <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
+            {getDiscountPercentage(product.originalPrice, product.price)}% off
+          </Badge>
+        )}
       </CardHeader>
     </Card>
   )
