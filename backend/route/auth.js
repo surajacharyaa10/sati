@@ -1,15 +1,11 @@
-import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import jwt from 'jsonwebtoken';
 import User from '../module/user.js';
 import { avatarUpload, deleteAvatar, saveAvatar } from '../services/avatar.js';
 import { verifyPassword } from '../services/password.js';
+import { authenticate, endSession, startSession } from '../services/session.js';
 
 const router = express.Router();
-const cookieName = 'sati_session';
-const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
-const developmentSecret = randomBytes(32).toString('hex');
 const authLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000,
 	limit: 10,
@@ -18,51 +14,12 @@ const authLimiter = rateLimit({
 	message: { error: 'Too many sign-in attempts. Please try again later.' },
 });
 
-const getSigningSecret = () => {
-	if (process.env.JWT_SECRET) {
-		return process.env.JWT_SECRET;
-	}
-
-	if (process.env.NODE_ENV === 'production') {
-		throw new Error('JWT_SECRET must be configured in production');
-	}
-
-	return developmentSecret;
-};
-
-const sessionCookieOptions = () => ({
-	httpOnly: true,
-	secure: process.env.NODE_ENV === 'production',
-	sameSite: 'lax',
-	maxAge: sessionDurationMs,
-	path: '/',
-});
-
 const publicUser = (user) => ({
 	id: user.id,
 	name: user.name,
 	email: user.email,
 	avatarUrl: user.avatarUrl ?? null,
 });
-
-const authenticate = (req, res, next) => {
-	const token = req.cookies?.[cookieName];
-	if (!token) {
-		return res.status(401).json({ error: 'Not signed in' });
-	}
-
-	try {
-		const payload = jwt.verify(token, getSigningSecret(), { issuer: 'sati-backend' });
-		if (typeof payload === 'string' || !payload.sub) {
-			return res.status(401).json({ error: 'Not signed in' });
-		}
-
-		req.authUserId = payload.sub;
-		return next();
-	} catch {
-		return res.status(401).json({ error: 'Not signed in' });
-	}
-};
 
 const parseAvatar = (req, res, next) => {
 	avatarUpload.single('photo')(req, res, (error) => {

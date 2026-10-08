@@ -1,17 +1,56 @@
 import express from 'express';
-import { addToWishlist, getWishlist } from '../services/wishlistService.js';
+import { authenticate } from '../services/session.js';
+import {
+  addToWishlist,
+  getWishlist,
+  removeFromWishlist,
+  toggleWishlistItem,
+} from '../services/wishlistService.js';
 
 const router = express.Router();
 
-router.post('/:userId', (req, res) => {
-  const { productId } = req.body;
-  if (!productId) return res.status(400).json({ error: 'productId required' });
-  const list = addToWishlist(req.params.userId, productId);
-  res.json(list);
+router.use(authenticate);
+
+router.get('/me', async (req, res, next) => {
+  try {
+    res.json(await getWishlist(req.authUserId));
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get('/:userId', (req, res) => {
-  res.json(getWishlist(req.params.userId));
+router.post('/me', async (req, res, next) => {
+  const { productId } = req.body ?? {};
+  if (typeof productId !== 'string' || !productId.trim()) {
+    return res.status(400).json({ error: 'productId required' });
+  }
+
+  try {
+    res.json(await addToWishlist(req.authUserId, productId.trim()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/me/toggle', async (req, res, next) => {
+  const { productId } = req.body ?? {};
+  if (typeof productId !== 'string' || !productId.trim()) {
+    return res.status(400).json({ error: 'productId required' });
+  }
+
+  try {
+    res.json(await toggleWishlistItem(req.authUserId, productId.trim()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/me/:productId', async (req, res, next) => {
+  try {
+    res.json(await removeFromWishlist(req.authUserId, req.params.productId));
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
