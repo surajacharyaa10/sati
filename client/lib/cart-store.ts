@@ -17,14 +17,13 @@ export type CartItem = {
   quantity: number
 }
 
-const storageKey = "sati-cart"
 const changeEvent = "sati:cart-change"
+const authChangeEvent = "sati:auth-change"
 const emptyCart: CartItem[] = []
-let cachedValue: string | null | undefined
-let cachedCart = emptyCart
 
 // Server-synced state. `null` means "no authenticated user" or "sync not yet
-// run"; in that case we fall back to the local copy in localStorage.
+// run"; in that case the cart is empty. There is no localStorage fallback —
+// cart and wishlist only exist for signed-in users.
 let serverState: CartItem[] | null = null
 let currentUserId: string | null = null
 let syncInProgress = false
@@ -44,41 +43,22 @@ function normalizeCart(value: unknown): CartItem[] {
   )
 }
 
-export function getLocalSnapshot(): CartItem[] {
-  const storedValue = window.localStorage.getItem(storageKey)
-  if (storedValue === cachedValue) return cachedCart
-
-  cachedValue = storedValue
-  try {
-    cachedCart = normalizeCart(storedValue ? JSON.parse(storedValue) : [])
-  } catch {
-    cachedCart = emptyCart
-  }
-  return cachedCart
-}
-
 export function getServerSnapshot() {
   return emptyCart
 }
 
 export function getSnapshot() {
   if (currentUserId && serverState !== null) return serverState
-  return getLocalSnapshot()
+  return emptyCart
 }
 
 export function subscribeToCart(onChange: () => void) {
-  window.addEventListener("storage", onChange)
   window.addEventListener(changeEvent, onChange)
+  window.addEventListener(authChangeEvent, onChange)
   return () => {
-    window.removeEventListener("storage", onChange)
     window.removeEventListener(changeEvent, onChange)
+    window.removeEventListener(authChangeEvent, onChange)
   }
-}
-
-function persistLocal(items: CartItem[]) {
-  cachedCart = items
-  cachedValue = JSON.stringify(items)
-  window.localStorage.setItem(storageKey, cachedValue)
 }
 
 function notify() {
@@ -89,32 +69,13 @@ async function syncWithServer(userId: string) {
   if (syncInProgress) return
   syncInProgress = true
   try {
-    // Merge the guest's local cart with the server's so nothing is lost when
-    // they sign in on a different device. Existing lines for the same
-    // product + size + color are combined; the server wins on quantity.
-    const local = getLocalSnapshot()
     const server = await cartApi.list()
-    const merged = server.slice()
-    const byKey = new Map(merged.map((item) => [`${item.id}|${item.size ?? ""}|${item.color ?? ""}`, item]))
-    for (const localItem of local) {
-      const key = `${localItem.id}|${localItem.size ?? ""}|${localItem.color ?? ""}`
-      const existing = byKey.get(key)
-      if (existing) {
-        existing.quantity = Math.min(existing.quantity + localItem.quantity, 99)
-      } else {
-        const copy = { ...localItem }
-        merged.push(copy)
-        byKey.set(key, copy)
-      }
-    }
-    const saved = await cartApi.replace(merged)
-    serverState = saved
+    serverState = server
     currentUserId = userId
-    persistLocal(saved)
     notify()
   } catch {
-    // Fall back to the local copy if the request fails.
-    serverState = getLocalSnapshot()
+    // Fall back to an empty cart if the request fails.
+    serverState = emptyCart
     currentUserId = userId
   } finally {
     syncInProgress = false
@@ -124,6 +85,10 @@ async function syncWithServer(userId: string) {
 function clearServerState() {
   serverState = null
   currentUserId = null
+  // The effect runs after render, so without this the first render after a
+  // sign-out would still read the previous user's cart. Notify forces the
+  // store to re-render with the now-empty snapshot immediately.
+  notify()
 }
 
 export function addCartItem(item: Omit<CartItem, "quantity">) {
@@ -132,21 +97,11 @@ export function addCartItem(item: Omit<CartItem, "quantity">) {
       .add(item.id, 1, item.size, item.color)
       .then((cart) => {
         serverState = cart
-        persistLocal(cart)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  const current = getLocalSnapshot()
-  const existing = current.find((cartItem) => cartItem.id === item.id)
-  persistLocal(existing
-    ? current.map((cartItem) => cartItem.id === item.id
-      ? { ...cartItem, quantity: Math.min(cartItem.quantity + 1, 99) }
-      : cartItem)
-    : [...current, { ...item, quantity: 1 }])
-  notify()
 }
 
 export function setCartItemQuantity(id: string, quantity: number) {
@@ -155,21 +110,11 @@ export function setCartItemQuantity(id: string, quantity: number) {
       .update(id, quantity)
       .then((cart) => {
         serverState = cart
-        persistLocal(cart)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  if (quantity < 1) {
-    removeCartItem(id)
-    return
-  }
-  persistLocal(getLocalSnapshot().map((item) => item.id === id
-    ? { ...item, quantity: Math.min(Math.trunc(quantity), 99) }
-    : item))
-  notify()
 }
 
 export function removeCartItem(id: string) {
@@ -178,15 +123,11 @@ export function removeCartItem(id: string) {
       .remove(id)
       .then((cart) => {
         serverState = cart
-        persistLocal(cart)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  persistLocal(getLocalSnapshot().filter((item) => item.id !== id))
-  notify()
 }
 
 export function clearCart() {
@@ -195,15 +136,11 @@ export function clearCart() {
       .clear()
       .then((cart) => {
         serverState = cart
-        persistLocal(cart)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  persistLocal([])
-  notify()
 }
 
 export function useCartSync() {

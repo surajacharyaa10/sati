@@ -4,13 +4,14 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, Heart, ShieldCheck, ShoppingBag, Truck } from "lucide-react"
+import { ArrowLeft, Check, Heart, ShieldCheck, ShoppingBag, Truck, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/app/components/cart-provider"
 import { productBadgeClasses } from "@/lib/product-badges"
 import type { StoreProduct } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
+import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
 
@@ -27,6 +28,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
   const router = useRouter()
   const { addItem } = useCart()
   const wishlist = useWishlist()
+  const { isAuthenticated } = useAuth()
   const [selectedColor, setSelectedColor] = useState(product.colors[0])
   const [selectedSize, setSelectedSize] = useState("M")
   const [isAdded, setIsAdded] = useState(false)
@@ -46,12 +48,20 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
   }
 
   function handleAddToCart() {
+    if (!isAuthenticated) {
+      router.push("/login")
+      return
+    }
     addSelectedVariant()
     setIsAdded(true)
     window.setTimeout(() => setIsAdded(false), 1800)
   }
 
   function handleBuyNow() {
+    if (!isAuthenticated) {
+      router.push("/login")
+      return
+    }
     addSelectedVariant()
     router.push("/cart")
   }
@@ -83,10 +93,11 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
             variant="outline"
             aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
             aria-pressed={isFavorite}
-            onClick={() => wishlist.toggle(product.id)}
+            onClick={() => isAuthenticated ? wishlist.toggle(product.id) : router.push("/login")}
             className="absolute right-4 top-4 size-10 rounded-full border-0 bg-white hover:bg-white hover:text-[#e94717]"
           >
             <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
+            {!isAuthenticated && <Lock className="absolute -right-1 -top-1 size-4 text-[#e94717]" />}
           </Button>
         </div>
 

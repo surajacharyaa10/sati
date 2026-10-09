@@ -13,6 +13,12 @@ export type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function emitAuthChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("sati:auth-change"))
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [hasCheckedSession, setHasCheckedSession] = useState(false)
@@ -42,11 +48,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null)
       setHasCheckedSession(true)
+      // Notify cart/wishlist stores that auth state changed
+      emitAuthChange()
     }
   }
 
+  // Also emit on successful login
+  async function handleSignIn() {
+    await refresh()
+    emitAuthChange()
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, hasCheckedSession, signOut, refresh }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, hasCheckedSession, signOut, refresh, handleSignIn }}>
       {children}
     </AuthContext.Provider>
   )

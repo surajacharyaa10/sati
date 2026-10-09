@@ -3,12 +3,14 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Heart } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Heart, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { productBadgeClasses } from "@/lib/product-badges"
 import { useProducts } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
+import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
 import {
@@ -26,6 +28,8 @@ export function NewArrivals() {
   const { products: allProducts, loading } = useProducts()
   const [selectedCategory, setSelectedCategory] = useState<Category>("All")
   const wishlist = useWishlist()
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
   const products = allProducts.filter((product) => product.label === "New").slice(0, 4)
   const visibleProducts = products.filter(
     (product) => selectedCategory === "All" || product.audience === selectedCategory,
@@ -119,7 +123,7 @@ export function NewArrivals() {
                           : `Add ${product.name} to favorites`
                       }
                       aria-pressed={isFavorite}
-                      onClick={() => wishlist.toggle(product.id)}
+                      onClick={() => isAuthenticated ? wishlist.toggle(product.id) : router.push("/login")}
                       className="absolute right-2.5 top-2.5 z-10 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
                     >
                       <Heart
@@ -130,6 +134,7 @@ export function NewArrivals() {
                             : "size-4"
                         }
                       />
+                      {!isAuthenticated && <Lock className="absolute -right-1 -top-1 size-4 text-[#e94717]" />}
                     </Button>
                   </div>
                 </CardContent>

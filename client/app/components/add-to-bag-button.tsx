@@ -1,16 +1,24 @@
 "use client"
 
 import { useState } from "react"
-import { Check, ShoppingBag } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Check, ShoppingBag, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/app/components/cart-provider"
+import { useAuth } from "@/app/components/auth-provider"
 import type { StoreProduct } from "@/lib/store-products"
 
 export function AddToBagButton({ product }: { product: StoreProduct }) {
   const { addItem } = useCart()
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
   const [wasAdded, setWasAdded] = useState(false)
 
   function handleAdd() {
+    if (!isAuthenticated) {
+      router.push("/login")
+      return
+    }
     addItem({
       id: product.id,
       name: product.name,
@@ -33,6 +41,7 @@ export function AddToBagButton({ product }: { product: StoreProduct }) {
     >
       {wasAdded ? <Check aria-hidden="true" className="size-3.5" /> : <ShoppingBag aria-hidden="true" className="size-3.5" />}
       {wasAdded ? "Added to bag" : "Add to bag"}
+      {!isAuthenticated && <Lock className="ml-1 size-3.5" />}
     </Button>
   )
 }

@@ -5,14 +5,13 @@ import { useSyncExternalStore } from "react"
 import { useAuth } from "@/app/components/auth-provider"
 import { wishlistApi } from "@/lib/api"
 
-const storageKey = "sati-wishlist"
 const changeEvent = "sati:wishlist-change"
 const emptyWishlist: string[] = []
-let cachedValue: string | null | undefined
-let cachedWishlist = emptyWishlist
 
 // Server-synced state. `null` means "no authenticated user" or "sync not yet
-// run"; in that case we fall back to the local copy in localStorage.
+// run"; in that case the wishlist is empty. There is no localStorage
+// fallback — a wishlist only exists for a signed-in user, so it is always
+// scoped to that user's session on the server.
 let serverState: string[] | null = null
 let currentUserId: string | null = null
 let syncInProgress = false
@@ -22,41 +21,20 @@ function normalizeWishlist(value: unknown) {
   return [...new Set(value.filter((id): id is string => typeof id === "string"))]
 }
 
-function getLocalSnapshot() {
-  const storedValue = window.localStorage.getItem(storageKey)
-  if (storedValue === cachedValue) return cachedWishlist
-
-  cachedValue = storedValue
-  try {
-    cachedWishlist = normalizeWishlist(storedValue ? JSON.parse(storedValue) : [])
-  } catch {
-    cachedWishlist = emptyWishlist
-  }
-  return cachedWishlist
-}
-
-function getServerSnapshot() {
+export function getServerSnapshot() {
   return emptyWishlist
 }
 
-function getSnapshot() {
+export function getSnapshot() {
   if (currentUserId && serverState !== null) return serverState
-  return getLocalSnapshot()
+  return emptyWishlist
 }
 
-function subscribeToWishlist(onChange: () => void) {
-  window.addEventListener("storage", onChange)
+export function subscribeToWishlist(onChange: () => void) {
   window.addEventListener(changeEvent, onChange)
   return () => {
-    window.removeEventListener("storage", onChange)
     window.removeEventListener(changeEvent, onChange)
   }
-}
-
-function persistLocal(productIds: string[]) {
-  cachedWishlist = productIds
-  cachedValue = JSON.stringify(productIds)
-  window.localStorage.setItem(storageKey, cachedValue)
 }
 
 function notify() {
@@ -67,19 +45,13 @@ async function syncWithServer(userId: string) {
   if (syncInProgress) return
   syncInProgress = true
   try {
-    // Merge the guest's local picks with whatever the server already has so
-    // nothing is lost when they sign in on a different device.
-    const local = getLocalSnapshot()
     const server = await wishlistApi.list()
-    const merged = [...new Set([...server, ...local])]
-    const saved = await wishlistApi.replace(merged)
-    serverState = saved
+    serverState = server
     currentUserId = userId
-    persistLocal(saved)
     notify()
   } catch {
-    // Fall back to the local copy if the request fails.
-    serverState = getLocalSnapshot()
+    // Fall back to an empty wishlist if the request fails.
+    serverState = emptyWishlist
     currentUserId = userId
   } finally {
     syncInProgress = false
@@ -89,6 +61,10 @@ async function syncWithServer(userId: string) {
 function clearServerState() {
   serverState = null
   currentUserId = null
+  // The effect runs after render, so without this the first render after a
+  // sign-out would still read the previous user's wishlist. Notify forces the
+  // store to re-render with the now-empty snapshot immediately.
+  notify()
 }
 
 export function toggleWishlistItem(productId: string) {
@@ -97,22 +73,11 @@ export function toggleWishlistItem(productId: string) {
       .toggle(productId)
       .then(({ productIds }) => {
         serverState = productIds
-        persistLocal(productIds)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  const current = getLocalSnapshot()
-  const next = current.includes(productId)
-    ? current.filter((id) => id !== productId)
-    : [...current, productId]
-
-  cachedWishlist = next
-  cachedValue = JSON.stringify(next)
-  window.localStorage.setItem(storageKey, cachedValue)
-  notify()
 }
 
 export function removeWishlistItem(productId: string) {
@@ -121,18 +86,11 @@ export function removeWishlistItem(productId: string) {
       .remove(productId)
       .then((productIds) => {
         serverState = productIds
-        persistLocal(productIds)
         notify()
       })
       .catch(() => {})
     return
   }
-
-  const next = getLocalSnapshot().filter((id) => id !== productId)
-  cachedWishlist = next
-  cachedValue = JSON.stringify(next)
-  window.localStorage.setItem(storageKey, cachedValue)
-  notify()
 }
 
 export function useWishlist() {

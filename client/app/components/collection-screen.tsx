@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Check, ChevronDown, Heart } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Check, ChevronDown, Heart, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +30,7 @@ import {
   type StoreProduct,
 } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
+import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
 
@@ -216,6 +218,8 @@ function CollectionProductCard({
   isFavorite: boolean
   onToggleFavorite: () => void
 }) {
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
   return (
     <Card className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
       <CardContent className="relative aspect-[4/5] p-0">
@@ -238,10 +242,11 @@ function CollectionProductCard({
             variant="outline"
             aria-label={isFavorite ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
             aria-pressed={isFavorite}
-            onClick={onToggleFavorite}
+            onClick={() => isAuthenticated ? onToggleFavorite() : router.push("/login")}
             className="absolute right-2.5 top-2.5 z-10 size-9 rounded-full border-0 bg-white text-[#171512] hover:bg-white hover:text-[#e94717]"
           >
             <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
+            {!isAuthenticated && <Lock className="absolute -right-1 -top-1 size-4 text-[#e94717]" />}
           </Button>
         </div>
       </CardContent>

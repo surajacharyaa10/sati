@@ -2,7 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Heart, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowRight, Heart, Trash2, Lock } from "lucide-react"
 import { Footer } from "@/app/components/footer"
 import { Navbar } from "@/app/components/navbar"
 import { AddToBagButton } from "@/app/components/add-to-bag-button"
@@ -11,13 +12,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { productBadgeClasses } from "@/lib/product-badges"
 import { useProducts } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
+import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
 
 export default function WishlistPage() {
   const { productIds, hasLoaded, remove } = useWishlist()
   const { products } = useProducts()
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
   const wishlistProducts = products.filter((product) => productIds.includes(product.id))
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-[60vh] bg-white text-[#171512]">
+          <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
+            <div className="flex flex-col items-center py-16 sm:py-20 text-center">
+              <Heart aria-hidden="true" className="size-9 text-[#e94717]" />
+              <Lock className="mt-3 size-9 text-[#e94717]" />
+              <h2 className="mt-5 font-serif text-2xl">Sign in to view your wishlist</h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[#706c66]">
+                Your saved items are stored locally. Sign in to sync them across devices.
+              </p>
+              <Button
+                className="mt-6 h-11 w-auto rounded-full bg-[#171512] px-5 text-xs font-semibold text-white hover:bg-[#e94717]"
+                onClick={() => router.push("/login")}
+              >
+                Sign in
+              </Button>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </>
+    )
+  }
 
   return (
     <>
