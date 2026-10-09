@@ -22,7 +22,7 @@ export default function CartPage() {
       <main className="min-h-[60vh] bg-white text-[#171512]">
         <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
           <div className="border-b border-black/10 pb-6 sm:pb-8">
-            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your selection</p>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your selection</p>
             <div className="flex items-end justify-between gap-4">
               <h1 className="font-serif text-4xl leading-none sm:text-5xl">Shopping bag</h1>
               {hasLoaded && <p className="text-xs text-[#817c75]">{itemCount} {itemCount === 1 ? "item" : "items"}</p>}
@@ -66,7 +66,7 @@ export default function CartPage() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#706c66] transition-colors hover:text-[#e94717]"
+                          className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#706c66] transition-colors hover:text-[#e94717]"
                         >
                           <Trash2 aria-hidden="true" className="size-3.5" /> Remove
                         </button>
@@ -75,13 +75,13 @@ export default function CartPage() {
                       <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
                         <div className="text-right">
                           {item.originalPrice && (
-                            <del className="block text-[10px] text-[#8b867e]">{formatRupees(item.originalPrice * item.quantity)}</del>
+                            <del className="block text-[12px] text-[#8b867e]">{formatRupees(item.originalPrice * item.quantity)}</del>
                           )}
                           <p className={`text-sm font-semibold ${item.originalPrice ? "text-[#e94717]" : ""}`}>
                             {formatRupees(item.price * item.quantity)}
                           </p>
                           {getDiscountPercentage(item.originalPrice, item.price) > 0 && (
-                            <p className="mt-1 text-[9px] font-bold uppercase text-[#c43d17]">
+                            <p className="mt-1 text-[11px] font-bold uppercase text-[#c43d17]">
                               {getDiscountPercentage(item.originalPrice, item.price)}% off
                             </p>
                           )}
@@ -141,7 +141,7 @@ export default function CartPage() {
                   <Button type="button" disabled className="h-11 w-full rounded-full bg-[#171512] text-xs font-semibold text-white">
                     Checkout unavailable
                   </Button>
-                  <p className="text-center text-[10px] leading-4 text-[#817c75]">
+                  <p className="text-center text-[12px] leading-4 text-[#817c75]">
                     Online checkout will be available once payments are connected.
                   </p>
                   <Link href="/arrival-new" className="inline-flex w-full items-center justify-center gap-2 pt-2 text-xs font-semibold hover:text-[#e94717]">

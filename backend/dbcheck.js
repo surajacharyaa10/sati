@@ -1,0 +1,10 @@
+import mongoose from 'mongoose';
+const url = process.env.DATABASE_URL;
+const c = new mongoose.MongoClient(url);
+await c.connect();
+const db = c.db();
+console.log('products:', await db.collection('product').countDocuments());
+console.log('users:', await db.collection('user').countDocuments());
+const carts = await db.collection('cart').find().toArray();
+for (const cart of carts) console.log('cart user', cart.user, 'items', JSON.stringify(cart.items));
+await c.close();

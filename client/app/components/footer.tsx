@@ -54,7 +54,7 @@ export function Footer() {
           <div className="max-w-sm">
             <Link href="/" aria-label="SATI home" className="inline-flex">
               <Image
-                src="/logo/logo.jpeg"
+                src="/logo/logo.png"
                 alt="SATI"
                 width={96}
                 height={96}
@@ -69,7 +69,7 @@ export function Footer() {
           <div className="grid grid-cols-3 gap-7 sm:gap-10">
             {footerGroups.map((group) => (
               <nav key={group.title} aria-label={group.title}>
-                <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[0.2em]">
+                <h2 className="mb-4 text-[12px] font-bold uppercase tracking-[0.2em]">
                   {group.title}
                 </h2>
                 <ul className="space-y-2.5">
@@ -79,7 +79,7 @@ export function Footer() {
                         href={link.href}
                         target={link.href.startsWith("https://") ? "_blank" : undefined}
                         rel={link.href.startsWith("https://") ? "noreferrer" : undefined}
-                        className="text-xs text-[#706c66] transition-colors hover:text-[#e94717]"
+                        className="text-[13px] text-[#706c66] transition-colors hover:text-[#e94717]"
                       >
                         {link.label}
                       </a>
@@ -91,7 +91,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-9 flex flex-col gap-2 border-t border-black/10 pt-5 text-[9px] text-[#8b867e] sm:mt-12 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-9 flex flex-col gap-2 border-t border-black/10 pt-5 text-[12px] text-[#8b867e] sm:mt-12 sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 SATI. All rights reserved.</p>
           <p>Thoughtful clothes. Made for everywhere.</p>
         </div>

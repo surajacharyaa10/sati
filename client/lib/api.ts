@@ -65,6 +65,48 @@ export const authApi = {
   },
 }
 
+export const wishlistApi = {
+  list: () => apiRequest<string[]>("/api/wishlist/me"),
+  add: (productId: string) =>
+    apiRequest<string[]>("/api/wishlist/me", { method: "POST", body: { productId } }),
+  toggle: (productId: string) =>
+    apiRequest<{ productIds: string[]; added: boolean }>("/api/wishlist/me/toggle", {
+      method: "POST",
+      body: { productId },
+    }),
+  remove: (productId: string) =>
+    apiRequest<string[]>(`/api/wishlist/me/${encodeURIComponent(productId)}`, {
+      method: "DELETE",
+    }),
+  // Replaces the whole list — used to merge a guest's local wishlist with the
+  // server's when they sign in.
+  replace: (productIds: string[]) =>
+    apiRequest<string[]>("/api/wishlist/me", { method: "PUT", body: { productIds } }),
+}
+
+export const cartApi = {
+  list: () => apiRequest<any[]>("/api/cart/me"),
+  add: (productId: string, quantity = 1, size?: string, color?: string) =>
+    apiRequest<any[]>("/api/cart/me", {
+      method: "POST",
+      body: { productId, quantity, size, color },
+    }),
+  update: (productId: string, quantity: number) =>
+    apiRequest<any[]>(`/api/cart/me/${encodeURIComponent(productId)}`, {
+      method: "PUT",
+      body: { quantity },
+    }),
+  remove: (productId: string) =>
+    apiRequest<any[]>(`/api/cart/me/${encodeURIComponent(productId)}`, {
+      method: "DELETE",
+    }),
+  clear: () => apiRequest<any[]>("/api/cart/me", { method: "DELETE" }),
+  // Replaces the whole cart — used to merge a guest's local cart with the
+  // server's when they sign in.
+  replace: (items: any[]) =>
+    apiRequest<any[]>("/api/cart/me", { method: "PUT", body: { items } }),
+}
+
 export const usersApi = {
   list: () => apiRequest<User[]>("/api/users"),
   get: (id: string) => apiRequest<User>(`/api/users/${encodeURIComponent(id)}`),

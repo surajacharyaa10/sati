@@ -126,6 +126,9 @@
   }
   html {
     @apply font-sans;
+    /* Base is 20px instead of the browser default 16px so all rem-based
+       text (body, headings, UI) reads larger without touching markup. */
+    font-size: 20px;
   }
 }
 

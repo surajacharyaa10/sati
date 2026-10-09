@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getAllProducts,
   getProductById,
+  createProduct,
   updateProduct,
   deleteProduct,
 } from '../services/productService.js';
@@ -27,6 +28,18 @@ router.get('/', async (req, res, next) => {
     const products = await getAllProducts({ audience, category, label });
     return res.json(products);
   } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/', async (req, res, next) => {
+  try {
+    const created = await createProduct(req.body);
+    return res.status(201).json(created);
+  } catch (error) {
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      return res.status(400).json({ error: error.message });
+    }
     return next(error);
   }
 });

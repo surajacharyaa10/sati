@@ -13,7 +13,7 @@ export default function Hero() {
           />
 
           <div className="relative z-10 max-w-xl">
-            <p className="mb-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#e94717]">
+            <p className="mb-5 flex items-center gap-3 text-[12px] font-bold uppercase tracking-[0.24em] text-[#e94717]">
               <span className="h-px w-5 bg-[#e94717]" />
           &apos;25 collection
             </p>
@@ -50,13 +50,13 @@ export default function Hero() {
             <div className="mt-10 flex max-w-sm items-center justify-between border-t border-black/10 pt-5">
               <div>
                 <p className="font-serif text-3xl font-semibold leading-none">4.9</p>
-                <p className="mt-2 text-[10px] text-[#706c66]">2k+ happy customers</p>
+                <p className="mt-2 text-[12px] text-[#706c66]">2k+ happy customers</p>
               </div>
               <div className="text-right">
                 <div aria-label="Rated 5 out of 5 stars" className="text-lg tracking-[0.15em] text-[#e94717]">
                   <span aria-hidden="true">★★★★★</span>
                 </div>
-                <p className="text-[10px] text-[#706c66]">Loved, worn, and lived in</p>
+                <p className="text-[12px] text-[#706c66]">Loved, worn, and lived in</p>
               </div>
             </div>
           </div>
@@ -72,13 +72,13 @@ export default function Hero() {
             className="object-cover object-[center_38%]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/5" />
-          <p className="absolute right-4 top-6 [writing-mode:vertical-rl] text-[8px] font-semibold uppercase tracking-[0.25em] text-white/90">
+          <p className="absolute right-4 top-6 [writing-mode:vertical-rl] text-[10px] font-semibold uppercase tracking-[0.25em] text-white/90">
             Expression without limits
           </p>
 
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-6 text-white sm:p-9 lg:p-11">
             <div>
-              <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.23em]">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.23em]">
                 The color edit
               </p>
               <h2 className="max-w-xs font-serif text-2xl font-semibold leading-[1.05] tracking-[-0.035em] sm:text-3xl">

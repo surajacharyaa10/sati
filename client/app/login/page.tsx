@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { authApi } from "@/lib/api"
+import { useAuth } from "@/app/components/auth-provider"
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter()
+  const { refresh } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
@@ -31,6 +33,7 @@ export default function LoginPage() {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
       })
+      await refresh()
       router.replace("/")
       router.refresh()
     } catch (error) {

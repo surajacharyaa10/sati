@@ -42,6 +42,12 @@ router.post('/', async (req, res) => {
 		return res.status(400).json({ error: 'Enter a name, valid email, and password between 8 and 128 characters' });
 	}
 
+	// The admin account is authenticated from environment variables only.
+	// Never persist a customer record that would shadow or duplicate it.
+	if (email.trim().toLowerCase() === (process.env.ADMIN_USERNAME ?? '').trim().toLowerCase()) {
+		return res.status(403).json({ error: 'That email is reserved for the admin account' });
+	}
+
 	try {
 		const user = await User.create({
 			name,

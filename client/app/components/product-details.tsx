@@ -74,7 +74,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
             sizes="(max-width: 1023px) 100vw, 54vw"
             className="object-cover"
           />
-          <Badge className={`absolute left-4 top-4 rounded-none px-3 py-1 text-[9px] font-bold uppercase tracking-[0.15em] ${productBadgeClasses[product.label]}`}>
+          <Badge className={`absolute left-4 top-4 rounded-none px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] ${productBadgeClasses[product.label]}`}>
             {product.label}
           </Badge>
           <Button
@@ -91,7 +91,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
         </div>
 
         <div className="flex flex-col py-1 lg:py-5">
-          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#e94717]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#e94717]">
             {product.audience} / {product.category}
           </p>
           <h1 className="mt-3 font-serif text-4xl leading-[0.98] sm:text-5xl">{product.name}</h1>
@@ -154,7 +154,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
                 </Button>
               ))}
             </div>
-            <button type="button" className="mt-3 text-[10px] font-semibold underline underline-offset-4 hover:text-[#e94717]">
+            <button type="button" className="mt-3 text-[12px] font-semibold underline underline-offset-4 hover:text-[#e94717]">
               Size guide
             </button>
           </fieldset>
@@ -170,7 +170,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
           </div>
           <p role="status" className="sr-only">{isAdded ? `${product.name} added to cart` : ""}</p>
 
-          <div className="mt-7 grid gap-3 border-y border-black/10 py-4 text-[10px] text-[#706c66] sm:grid-cols-2">
+          <div className="mt-7 grid gap-3 border-y border-black/10 py-4 text-[12px] text-[#706c66] sm:grid-cols-2">
             <p className="flex items-center gap-2"><Truck aria-hidden="true" className="size-4 text-[#e94717]" /> Free shipping over {formatRupees(120)}</p>
             <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-4 text-[#e94717]" /> Easy 30-day returns</p>
           </div>
@@ -191,7 +191,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
 
       <section id="reviews" aria-labelledby="reviews-title" className="mx-auto max-w-7xl border-t border-black/10 px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
         <div className="mb-8 border-b border-black/10 pb-5">
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[#e94717]">Customer feedback</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#e94717]">Customer feedback</p>
           <h2 id="reviews-title" className="font-serif text-3xl">Reviews & ratings</h2>
         </div>
 

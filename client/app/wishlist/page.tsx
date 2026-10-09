@@ -9,14 +9,15 @@ import { AddToBagButton } from "@/app/components/add-to-bag-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { productBadgeClasses } from "@/lib/product-badges"
-import { storeProducts } from "@/lib/store-products"
+import { useProducts } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
 
 export default function WishlistPage() {
   const { productIds, hasLoaded, remove } = useWishlist()
-  const products = storeProducts.filter((product) => productIds.includes(product.id))
+  const { products } = useProducts()
+  const wishlistProducts = products.filter((product) => productIds.includes(product.id))
 
   return (
     <>
@@ -24,10 +25,10 @@ export default function WishlistPage() {
       <main className="min-h-[60vh] bg-white text-[#171512]">
         <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
           <div className="border-b border-black/10 pb-6 sm:pb-8">
-            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your saved pieces</p>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your saved pieces</p>
             <div className="flex items-end justify-between gap-4">
               <h1 className="font-serif text-4xl leading-none sm:text-5xl">Wishlist</h1>
-              {hasLoaded && <p className="text-xs text-[#817c75]">{products.length} {products.length === 1 ? "piece" : "pieces"}</p>}
+              {hasLoaded && <p className="text-xs text-[#817c75]">{wishlistProducts.length} {wishlistProducts.length === 1 ? "piece" : "pieces"}</p>}
             </div>
           </div>
 
@@ -49,13 +50,13 @@ export default function WishlistPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-8 py-8 sm:gap-x-4 lg:grid-cols-4 lg:gap-x-6">
-              {products.map((product) => (
+              {wishlistProducts.map((product) => (
                 <Card key={product.id} className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
                   <CardContent className="relative aspect-[4/5] p-0">
                     <Link href={`/product/${product.id}`} aria-label={`View ${product.name}`} className="absolute inset-0">
                       <Image src={product.image} alt={product.alt} fill sizes="(max-width: 639px) 48vw, 24vw" className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]" />
                     </Link>
-                    <span className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
+                    <span className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
                       {product.label}
                     </span>
                     <Button
@@ -74,15 +75,15 @@ export default function WishlistPage() {
                       <Link href={`/product/${product.id}`} className="hover:text-[#e94717]">{product.name}</Link>
                     </CardTitle>
                     <div className="flex flex-wrap items-center gap-2">
-                      {product.originalPrice && <del className="text-[10px] text-[#8b867e]">{formatRupees(product.originalPrice)}</del>}
+                      {product.originalPrice && <del className="text-[12px] text-[#8b867e]">{formatRupees(product.originalPrice)}</del>}
                       <p className={`text-xs font-semibold ${product.originalPrice ? "text-[#e94717]" : ""}`}>{formatRupees(product.price)}</p>
                       {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
-                        <span className="rounded-sm bg-[#fae5dd] px-1.5 py-0.5 text-[8px] font-bold text-[#c43d17]">
+                        <span className="rounded-sm bg-[#fae5dd] px-1.5 py-0.5 text-[10px] font-bold text-[#c43d17]">
                           {getDiscountPercentage(product.originalPrice, product.price)}% off
                         </span>
                       )}
                     </div>
-                    <CardDescription className="col-span-2 text-[10px] text-[#817c75]">{product.details}</CardDescription>
+                    <CardDescription className="col-span-2 text-[12px] text-[#817c75]">{product.details}</CardDescription>
                     <div className="col-span-2 pt-2"><AddToBagButton product={product} /></div>
                   </CardHeader>
                 </Card>

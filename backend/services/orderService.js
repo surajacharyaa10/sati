@@ -46,6 +46,11 @@ export async function createOrderFromCart(userId) {
 }
 
 export async function getOrdersByUser(userId) {
+  // Admin sessions use a non-ObjectId id ("admin-<timestamp>"), which would
+  // throw a CastError in Order.find. Admins have no order history.
+  if (typeof userId === "string" && userId.startsWith("admin-")) {
+    return [];
+  }
   return Order.find({ user: userId }).sort({ createdAt: -1 });
 }
 

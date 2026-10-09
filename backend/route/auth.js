@@ -12,6 +12,12 @@ const authLimiter = rateLimit({
 	standardHeaders: 'draft-8',
 	legacyHeaders: false,
 	message: { error: 'Too many sign-in attempts. Please try again later.' },
+	// Admin attempts use their own counter bucket so a locked-out user
+	// account can never block the admin sign-in path.
+	keyGenerator: (req) => {
+		const email = req.body && typeof req.body.email === 'string' ? req.body.email.trim() : '';
+		return email && email === process.env.ADMIN_USERNAME ? `admin:${req.ip}` : `user:${req.ip}`;
+	},
 });
 
 const publicUser = (user) => ({
@@ -38,19 +44,32 @@ router.post('/signin', authLimiter, async (req, res) => {
 		return res.status(400).json({ error: 'Enter your email address and password' });
 	}
 
+	// Check for admin credentials from environment variables
+	const adminUsername = process.env.ADMIN_USERNAME;
+	const adminPassword = process.env.ADMIN_PASSWORD;
+	
+	if (adminUsername && adminPassword && 
+	    email.trim() === adminUsername && 
+	    password === adminPassword) {
+		// Create admin user object
+		const adminUser = {
+			id: 'admin-' + Date.now(), // Temporary ID for admin session
+			name: 'Administrator',
+			email: adminUsername,
+			avatarUrl: null
+		};
+		
+		startSession(res, adminUser.id);
+		return res.json({ user: publicUser(adminUser) });
+	}
+
 	try {
 		const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+passwordHash');
 		if (!user || !(await verifyPassword(password, user.passwordHash))) {
 			return res.status(401).json({ error: 'Email or password is incorrect' });
 		}
 
-		const token = jwt.sign({}, getSigningSecret(), {
-			subject: user.id,
-			issuer: 'sati-backend',
-			expiresIn: '7d',
-		});
-
-		res.cookie(cookieName, token, sessionCookieOptions());
+		startSession(res, user.id);
 		return res.json({ user: publicUser(user) });
 	} catch (error) {
 		console.error('Sign-in failed:', error);
@@ -59,6 +78,18 @@ router.post('/signin', authLimiter, async (req, res) => {
 });
 
 router.get('/me', authenticate, async (req, res) => {
+	// Admin sessions use a non-ObjectId id ("admin-<timestamp>"), which would
+	// throw a CastError in User.findById. Handle them before the DB lookup.
+	if (req.authUserId.startsWith('admin-')) {
+		const adminUser = {
+			id: req.authUserId,
+			name: 'Administrator',
+			email: process.env.ADMIN_USERNAME,
+			avatarUrl: null
+		};
+		return res.json({ user: publicUser(adminUser) });
+	}
+
 	try {
 		const user = await User.findById(req.authUserId);
 		if (!user) {
@@ -73,6 +104,11 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 router.patch('/profile', authenticate, parseAvatar, async (req, res) => {
+	// Prevent profile modification for admin sessions
+	if (req.authUserId.startsWith('admin-')) {
+		return res.status(403).json({ error: 'Cannot modify admin profile' });
+	}
+	
 	const { name, email, removePhoto } = req.body ?? {};
 	if (
 		typeof name !== 'string' || !name.trim() || name.trim().length > 100 ||
@@ -141,8 +177,7 @@ router.patch('/profile', authenticate, parseAvatar, async (req, res) => {
 });
 
 router.post('/signout', (_req, res) => {
-	const { maxAge: _maxAge, ...clearOptions } = sessionCookieOptions();
-	res.clearCookie(cookieName, clearOptions);
+	endSession(res);
 	return res.status(204).end();
 });
 

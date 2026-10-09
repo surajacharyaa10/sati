@@ -1,14 +1,12 @@
 "use client"
 
-import { createContext, useContext, useSyncExternalStore, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from "react"
 import {
   addCartItem,
   clearCart,
-  getCartSnapshot,
-  getServerCartSnapshot,
   removeCartItem,
   setCartItemQuantity,
-  subscribeToCart,
+  useCartSync,
   type CartItem,
 } from "@/lib/cart-store"
 
@@ -25,16 +23,12 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const items = useSyncExternalStore(subscribeToCart, getCartSnapshot, getServerCartSnapshot)
-  const hasLoaded = useSyncExternalStore(subscribeToCart, () => true, () => false)
-  const addItem = addCartItem
-  const setQuantity = setCartItemQuantity
-  const removeItem = removeCartItem
-
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0)
+  // Triggers the sync effect: merges the guest's local cart into the DB and
+  // switches the store to server-backed mode once the user is authenticated.
+  const { items, itemCount, hasLoaded } = useCartSync()
 
   return (
-    <CartContext.Provider value={{ items, itemCount, hasLoaded, addItem, setQuantity, removeItem, clearCart }}>
+    <CartContext.Provider value={{ items, itemCount, hasLoaded, addItem: addCartItem, setQuantity: setCartItemQuantity, removeItem: removeCartItem, clearCart }}>
       {children}
     </CartContext.Provider>
   )

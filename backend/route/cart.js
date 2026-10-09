@@ -6,6 +6,7 @@ import {
   updateCartItem,
   removeFromCart,
   clearCart,
+  replaceCart,
 } from '../services/cartService.js';
 
 const router = express.Router();
@@ -59,6 +60,19 @@ router.put('/me/:productId', async (req, res, next) => {
 router.delete('/me/:productId', async (req, res, next) => {
   try {
     res.json(await removeFromCart(req.authUserId, req.params.productId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/me', async (req, res, next) => {
+  const { items } = req.body ?? {};
+  if (!Array.isArray(items) || !items.every((item) => typeof item.id === 'string')) {
+    return res.status(400).json({ error: 'items must be an array of { id }' });
+  }
+
+  try {
+    res.json(await replaceCart(req.authUserId, items));
   } catch (error) {
     next(error);
   }

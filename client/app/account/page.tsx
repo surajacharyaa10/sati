@@ -8,10 +8,11 @@ import { ArrowRight, Camera, LogOut, UserRound, X } from "lucide-react"
 import { Navbar } from "@/app/components/navbar"
 import { Button } from "@/components/ui/button"
 import { apiBaseUrl, authApi, type AuthUser } from "@/lib/api"
+import { useAuth } from "@/app/components/auth-provider"
 
 export default function AccountPage() {
   const router = useRouter()
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const { user, hasCheckedSession, signOut, refresh } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -33,31 +34,15 @@ export default function AccountPage() {
   }
 
   useEffect(() => {
-    let isMounted = true
-
-    authApi.currentUser()
-      .then(({ user: currentUser }) => {
-        if (isMounted) {
-          setUser(currentUser)
-          setName(currentUser.name)
-          setEmail(currentUser.email)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : "Unable to load your profile."
-          if (message !== "Not signed in") setLoadError(message)
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false)
-      })
-
-    return () => {
-      isMounted = false
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    if (!hasCheckedSession) return
+    if (user) {
+      setName(user.name)
+      setEmail(user.email)
+      setIsLoading(false)
+    } else {
+      setIsLoading(false)
     }
-  }, [])
+  }, [hasCheckedSession, user])
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedPhoto = event.currentTarget.files?.[0]
@@ -105,7 +90,7 @@ export default function AccountPage() {
         ...(photo ? { photo } : {}),
         ...(removePhoto ? { removePhoto: true } : {}),
       })
-      setUser(updatedUser)
+      await refresh()
       setName(updatedUser.name)
       setEmail(updatedUser.email)
       clearPhotoPreview()
@@ -127,7 +112,7 @@ export default function AccountPage() {
     setFormError("")
 
     try {
-      await authApi.signOut()
+      await signOut()
       router.replace("/login")
       router.refresh()
     } catch (error) {
@@ -150,7 +135,7 @@ export default function AccountPage() {
 
       <main className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
         <div className="border-b border-black/10 pb-8">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#e94717]">
+          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.24em] text-[#e94717]">
             Your SATI account
           </p>
           <div className="flex flex-wrap items-end justify-between gap-5">
@@ -213,7 +198,7 @@ export default function AccountPage() {
               <div>
                 <h2 className="font-serif text-2xl">{user.name}</h2>
                 <p className="mt-1 break-all text-sm text-[#706c66]">{user.email}</p>
-                <p className="mt-4 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#706c66]">
+                <p className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.18em] text-[#706c66]">
                   <span aria-hidden="true" className="size-1.5 rounded-full bg-[#59805d]" />
                   Account active
                 </p>
@@ -223,7 +208,7 @@ export default function AccountPage() {
             <section aria-labelledby="personal-details-title">
               <div className="flex items-end justify-between border-b border-black/10 pb-4">
                 <div>
-                  <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[#e94717]">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#e94717]">
                     Profile
                   </p>
                   <h2 id="personal-details-title" className="font-serif text-2xl">

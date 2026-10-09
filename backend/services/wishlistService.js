@@ -37,6 +37,14 @@ export async function removeFromWishlist(userId, productId) {
   return wishlist.productIds;
 }
 
+export async function replaceWishlist(userId, productIds) {
+  const unique = [...new Set(productIds)];
+  const wishlist = await loadOrCreateWishlist(userId);
+  wishlist.productIds = unique;
+  await wishlist.save();
+  return unique;
+}
+
 export async function toggleWishlistItem(userId, productId) {
   const wishlist = await loadOrCreateWishlist(userId);
   const index = wishlist.productIds.indexOf(productId);

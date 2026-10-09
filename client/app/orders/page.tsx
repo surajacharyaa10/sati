@@ -10,7 +10,7 @@ export default function OrdersPage() {
       <main className="min-h-[60vh] bg-white text-[#171512]">
         <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-14">
           <div className="border-b border-black/10 pb-6 sm:pb-8">
-            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your SATI account</p>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#e94717]">Your SATI account</p>
             <h1 className="font-serif text-4xl leading-none sm:text-5xl">Order history</h1>
           </div>
 

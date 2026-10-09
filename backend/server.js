@@ -6,6 +6,7 @@ import connectDB from './services/db.js';
 import authRoutes from './route/auth.js';
 import userRoutes from './route/user.js';
 import productRoutes from './route/products.js';
+import collectionRoutes from './route/collections.js';
 import wishlistRoutes from './route/wishlist.js';
 import cartRoutes from './route/cart.js';
 import orderRoutes from './route/orders.js';
@@ -14,8 +15,21 @@ dotenv.config();
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN,
+  process.env.ADMIN_ORIGIN,
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -23,12 +37,19 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/collections', collectionRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
+});
+
+// Global error handler for unhandled async rejections in Express 5
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 const PORT = Number(process.env.API_PORT) || 5001;

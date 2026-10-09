@@ -29,7 +29,7 @@ export function AddToBagButton({ product }: { product: StoreProduct }) {
       size="sm"
       onClick={handleAdd}
       aria-label={wasAdded ? `${product.name} added to bag` : `Add ${product.name} to bag`}
-      className="h-9 w-full rounded-full bg-[#171512] text-[10px] font-semibold text-white hover:bg-[#e94717]"
+      className="h-9 w-full rounded-full bg-[#171512] text-[12px] font-semibold text-white hover:bg-[#e94717]"
     >
       {wasAdded ? <Check aria-hidden="true" className="size-3.5" /> : <ShoppingBag aria-hidden="true" className="size-3.5" />}
       {wasAdded ? "Added to bag" : "Add to bag"}
