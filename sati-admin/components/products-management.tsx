@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import type { Product } from "@/lib/admin-api"
 import { adminApi } from "@/lib/admin-api"
+import { ProductModal } from "@/components/product-modal"
 
 export function ProductsManagement({
   products,
@@ -24,6 +25,8 @@ export function ProductsManagement({
   const [editPrice, setEditPrice] = useState<string>("")
   const [editStock, setEditStock] = useState<string>("")
   const [errorMessage, setErrorMessage] = useState<string>("")
+  const [modalProduct, setModalProduct] = useState<Product | null | undefined>(undefined)
+  // undefined = closed, null = Add mode, Product object = Edit mode
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [formError, setFormError] = useState<string>("")
@@ -159,7 +162,7 @@ export function ProductsManagement({
               />
             </div>
             <Button
-              onClick={() => setCreateOpen(true)}
+              onClick={() => setModalProduct(null)}
               className="h-10 rounded-xl bg-[#e94717] hover:bg-[#d03e12] text-white gap-2"
             >
               <Plus className="size-4" />
@@ -273,11 +276,7 @@ export function ProductsManagement({
                             <Button
                               size="icon"
                               variant="ghost"
-                              onClick={() => {
-                                setEditingId(p.id)
-                                setEditPrice(String(p.price))
-                                setEditStock(String(p.stock ?? 25))
-                              }}
+                              onClick={() => setModalProduct(p)}
                               className="size-8 hover:bg-muted"
                             >
                               <Edit3 className="size-4 text-muted-foreground" />
@@ -301,6 +300,14 @@ export function ProductsManagement({
           </Table>
         </CardContent>
       </Card>
+
+      {modalProduct !== undefined && (
+        <ProductModal
+          product={modalProduct}
+          onClose={() => setModalProduct(undefined)}
+          onSaved={() => { setModalProduct(undefined); onUpdate() }}
+        />
+      )}
     </div>
   )
 }

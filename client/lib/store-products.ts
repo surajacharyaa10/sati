@@ -5,6 +5,13 @@ import type { ProductBadgeLabel } from "@/lib/product-badges"
 export type ProductCategory = "Sets" | "Dresses" | "Outerwear" | "Tops"
 export type ProductAudience = "Women" | "Men"
 
+export type StoreProductImage = {
+  url: string
+  alt?: string
+  size?: string
+  color?: string
+}
+
 export type StoreProduct = {
   id: string
   name: string
@@ -23,6 +30,44 @@ export type StoreProduct = {
   label: ProductBadgeLabel
   image: string
   alt: string
+  images?: StoreProductImage[]
+}
+
+export function getProductGallery(product: {
+  image?: string
+  alt?: string
+  name?: string
+  images?: StoreProductImage[]
+}): StoreProductImage[] {
+  const result: StoreProductImage[] = []
+  const seen = new Set<string>()
+
+  if (Array.isArray(product.images)) {
+    for (const item of product.images) {
+      if (item?.url && !seen.has(item.url)) {
+        seen.add(item.url)
+        result.push({
+          url: item.url,
+          alt: item.alt || product.alt || product.name || "",
+          size: item.size,
+          color: item.color,
+        })
+      }
+    }
+  }
+
+  if (product.image && !seen.has(product.image)) {
+    result.unshift({
+      url: product.image,
+      alt: product.alt || product.name || "",
+    })
+  }
+
+  if (result.length === 0 && product.image) {
+    result.push({ url: product.image, alt: product.alt || product.name || "" })
+  }
+
+  return result
 }
 
 export type CollectionKind = "arrivals" | "women" | "men" | "sale"

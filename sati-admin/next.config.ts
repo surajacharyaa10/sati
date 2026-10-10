@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001").replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
@@ -14,6 +16,14 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${BACKEND}/api/:path*`,
+      },
+    ];
   },
 };
 

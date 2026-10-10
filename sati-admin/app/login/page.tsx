@@ -33,10 +33,15 @@ function LoginContent() {
     const formData = new FormData(event.currentTarget)
 
     try {
-      await adminAuth.signIn({
+      const { user } = await adminAuth.signIn({
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
       })
+      if (!user.isAdmin && user.role !== "admin" && !user.id.startsWith("admin-")) {
+        await adminAuth.signOut()
+        setErrorMessage("Access denied: This account does not have administrator privileges.")
+        return
+      }
       router.replace(redirect)
       router.refresh()
     } catch (error) {

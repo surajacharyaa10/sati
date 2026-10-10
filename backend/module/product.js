@@ -99,6 +99,20 @@ const productSchema = new mongoose.Schema(
       trim: true,
       maxlength: 240,
     },
+    // Additional photos for the product. Each entry can carry an optional
+    // size and/or color label so admins can attach size- or color-specific
+    // imagery (e.g. a photo of the piece in a particular size).
+    images: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true },
+          alt: { type: String, default: '', trim: true, maxlength: 240 },
+          size: { type: String, default: '', trim: true, maxlength: 16 },
+          color: { type: String, default: '', trim: true, maxlength: 64 },
+        },
+      ],
+      default: [],
+    },
     stock: {
       type: Number,
       default: 0,

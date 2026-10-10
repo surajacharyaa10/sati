@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
@@ -5,10 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Footer } from "@/app/components/footer"
 import { Navbar } from "@/app/components/navbar"
-import { journalPosts } from "@/lib/journal-posts"
+import { fetchJournalPosts } from "@/lib/journal-posts"
 
-export default function JournalPage() {
-  const [featuredPost, ...latestPosts] = journalPosts
+async function JournalContent() {
+  const posts = await fetchJournalPosts()
+  const [featuredPost, ...latestPosts] = posts
 
   return (
     <>
@@ -95,5 +97,26 @@ export default function JournalPage() {
       </main>
       <Footer />
     </>
+  )
+}
+
+export default async function JournalPage() {
+  return (
+    <Suspense fallback={<JournalFallback />}>
+      <JournalContent />
+    </Suspense>
+  )
+}
+
+function JournalFallback() {
+  return (
+    <main aria-busy="true" className="bg-white">
+      <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
+        <div className="h-3 w-28 animate-pulse bg-[#f0ece5]" />
+        <div className="mt-6 h-14 max-w-2xl animate-pulse bg-[#f0ece5]" />
+        <div className="mt-4 h-4 max-w-xl animate-pulse bg-[#f0ece5]" />
+      </div>
+      <div className="mx-auto aspect-video max-h-[640px] max-w-7xl animate-pulse bg-[#f0ece5]" />
+    </main>
   )
 }

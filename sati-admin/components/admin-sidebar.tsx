@@ -10,6 +10,8 @@ import {
   Store,
   LogOut,
   Sparkles,
+  FileText,
+  Bell,
 } from "lucide-react"
 import {
   Sidebar,
@@ -30,11 +32,13 @@ type NavItem = {
 }
 
 const items: NavItem[] = [
-  { id: "dashboard", title: "Dashboard", icon: LayoutDashboard },
-  { id: "products", title: "Products", icon: Package },
-  { id: "orders", title: "Orders", icon: ShoppingBag },
-  { id: "customers", title: "Customers", icon: Users },
-  { id: "settings", title: "Store Settings", icon: Settings },
+  { id: "dashboard",     title: "Dashboard",       icon: LayoutDashboard },
+  { id: "products",      title: "Products",         icon: Package },
+  { id: "orders",        title: "Orders",           icon: ShoppingBag },
+  { id: "customers",     title: "Customers",        icon: Users },
+  { id: "journal",       title: "Journal",          icon: FileText },
+  { id: "notifications", title: "Notifications",    icon: Bell },
+  { id: "settings",      title: "Store Settings",   icon: Settings },
 ]
 
 export function AdminSidebar({

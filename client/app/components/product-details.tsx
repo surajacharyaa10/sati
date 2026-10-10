@@ -4,12 +4,12 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, Heart, ShieldCheck, ShoppingBag, Truck, Lock } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/app/components/cart-provider"
 import { productBadgeClasses } from "@/lib/product-badges"
-import type { StoreProduct } from "@/lib/store-products"
+import { getProductGallery, type StoreProduct } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
@@ -34,14 +34,37 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
   const [isAdded, setIsAdded] = useState(false)
   const isFavorite = wishlist.productIds.includes(product.id)
 
+  const gallery = getProductGallery(product)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+
+  function handleColorSelect(color: string) {
+    setSelectedColor(color)
+    const matchIdx = gallery.findIndex(
+      (img) => img.color && img.color.toLowerCase() === color.toLowerCase()
+    )
+    if (matchIdx !== -1) {
+      setActiveImageIndex(matchIdx)
+    }
+  }
+
+  function handlePrevImage() {
+    setActiveImageIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1))
+  }
+
+  function handleNextImage() {
+    setActiveImageIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1))
+  }
+
+  const activeImage = gallery[activeImageIndex] || gallery[0] || { url: product.image, alt: product.alt }
+
   function addSelectedVariant() {
     addItem({
       id: `${product.id}:${selectedColor}:${selectedSize}`,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
-      image: product.image,
-      alt: product.alt,
+      image: activeImage.url || product.image,
+      alt: activeImage.alt || product.alt,
       color: selectedColor,
       size: selectedSize,
     })
@@ -75,30 +98,93 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
       </div>
 
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-6 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:gap-14 lg:px-14">
-        <div className="relative aspect-[4/5] overflow-hidden bg-[#f2eee8] lg:aspect-[0.9/1]">
-          <Image
-            src={product.image}
-            alt={product.alt}
-            fill
-            priority
-            sizes="(max-width: 1023px) 100vw, 54vw"
-            className="object-cover"
-          />
-          <Badge className={`absolute left-4 top-4 rounded-none px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] ${productBadgeClasses[product.label]}`}>
-            {product.label}
-          </Badge>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-            aria-pressed={isFavorite}
-            onClick={() => isAuthenticated ? wishlist.toggle(product.id) : router.push("/login")}
-            className="absolute right-4 top-4 size-10 rounded-full border-0 bg-white hover:bg-white hover:text-[#e94717]"
-          >
-            <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
-            {!isAuthenticated && <Lock className="absolute -right-1 -top-1 size-4 text-[#e94717]" />}
-          </Button>
+        {/* Gallery column: Main Photo + Thumbnails rail */}
+        <div className="flex flex-col gap-3">
+          <div className="group relative aspect-[4/5] overflow-hidden bg-[#f2eee8] lg:aspect-[0.9/1]">
+            <Image
+              key={activeImage.url}
+              src={activeImage.url}
+              alt={activeImage.alt || product.alt}
+              fill
+              priority
+              sizes="(max-width: 1023px) 100vw, 54vw"
+              className="object-cover transition-opacity duration-300"
+            />
+            <Badge className={`absolute left-4 top-4 rounded-none px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] ${productBadgeClasses[product.label]}`}>
+              {product.label}
+            </Badge>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              aria-pressed={isFavorite}
+              onClick={() => isAuthenticated ? wishlist.toggle(product.id) : router.push("/login")}
+              className="absolute right-4 top-4 size-10 rounded-full border-0 bg-white hover:bg-white hover:text-[#e94717] shadow-sm"
+            >
+              <Heart aria-hidden="true" className={isFavorite ? "size-4 fill-[#e94717] text-[#e94717]" : "size-4"} />
+              {!isAuthenticated && <Lock className="absolute -right-1 -top-1 size-4 text-[#e94717]" />}
+            </Button>
+
+            {/* Prev / Next Arrows */}
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handlePrevImage() }}
+                  aria-label="Previous photo"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 flex size-9 items-center justify-center rounded-full bg-white/85 text-[#171512] shadow-md backdrop-blur-sm transition opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white hover:scale-105 active:scale-95 sm:size-10"
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleNextImage() }}
+                  aria-label="Next photo"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex size-9 items-center justify-center rounded-full bg-white/85 text-[#171512] shadow-md backdrop-blur-sm transition opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white hover:scale-105 active:scale-95 sm:size-10"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+
+                {/* Counter Pill */}
+                <div className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+                  {activeImageIndex + 1} / {gallery.length}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Thumbnails Row if multiple photos */}
+          {gallery.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
+              {gallery.map((img, idx) => (
+                <button
+                  key={`${img.url}-${idx}`}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={`View photo ${idx + 1}`}
+                  className={`group/thumb relative aspect-[4/5] w-16 sm:w-20 shrink-0 overflow-hidden rounded-sm transition ${
+                    activeImageIndex === idx
+                      ? "ring-2 ring-[#e94717] ring-offset-2 opacity-100"
+                      : "opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <Image
+                    src={img.url}
+                    alt={img.alt || `${product.name} photo ${idx + 1}`}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                  {(img.color || img.size) && (
+                    <span className="absolute bottom-1 inset-x-1 truncate rounded bg-black/75 px-1 py-0.5 text-[8px] font-medium text-white text-center">
+                      {[img.color, img.size].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col py-1 lg:py-5">
@@ -138,7 +224,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
                   type="button"
                   aria-label={`Select ${color}`}
                   aria-pressed={selectedColor === color}
-                  onClick={() => setSelectedColor(color)}
+                  onClick={() => handleColorSelect(color)}
                   className={`size-7 rounded-full border-2 p-0.5 ${selectedColor === color ? "border-[#171512]" : "border-transparent"}`}
                 >
                   <span className="block size-full rounded-full border border-black/10" style={{ backgroundColor: swatchColors[color] ?? "#d2c5b1" }} />

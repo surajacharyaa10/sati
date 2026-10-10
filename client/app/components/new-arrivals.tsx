@@ -8,7 +8,7 @@ import { Heart, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { productBadgeClasses } from "@/lib/product-badges"
-import { useProducts } from "@/lib/store-products"
+import { getProductGallery, useProducts } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
@@ -85,6 +85,8 @@ export function NewArrivals() {
         <div className="grid grid-cols-2 gap-x-3 gap-y-8 px-3 pt-2 sm:grid-cols-4 sm:gap-x-3 sm:gap-y-10 sm:px-4 lg:gap-x-4 lg:px-6">
           {visibleProducts.map((product) => {
             const isFavorite = wishlist.productIds.includes(product.id)
+            const gallery = getProductGallery(product)
+            const secondaryImage = gallery.length > 1 ? gallery[1] : null
 
             return (
               <Card
@@ -103,8 +105,17 @@ export function NewArrivals() {
                         alt={product.alt}
                         fill
                         sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
-                        className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
+                        className={`object-cover transition-all duration-500 group-hover/card:scale-[1.03] ${secondaryImage ? "group-hover/card:opacity-0" : ""}`}
                       />
+                      {secondaryImage && (
+                        <Image
+                          src={secondaryImage.url}
+                          alt={secondaryImage.alt || product.alt}
+                          fill
+                          sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
+                          className="object-cover transition-all duration-500 opacity-0 group-hover/card:opacity-100 group-hover/card:scale-[1.03]"
+                        />
+                      )}
                     </Link>
 
                     <Badge
@@ -112,6 +123,12 @@ export function NewArrivals() {
                     >
                       {product.label}
                     </Badge>
+
+                    {gallery.length > 1 && (
+                      <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+                        <span>{gallery.length} photos</span>
+                      </div>
+                    )}
 
                     <Button
                       type="button"

@@ -9,6 +9,7 @@ export type AuthContextValue = {
   hasCheckedSession: boolean
   signOut: () => Promise<void>
   refresh: () => Promise<void>
+  handleSignIn: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)

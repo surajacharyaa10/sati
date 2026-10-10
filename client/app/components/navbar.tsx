@@ -16,6 +16,7 @@ import { useAuth } from "@/app/components/auth-provider"
 import { useCart } from "@/app/components/cart-provider"
 import { useWishlist } from "@/lib/wishlist-store"
 import { formatRupees } from "@/lib/currency"
+import { NotificationsPanel } from "@/app/components/notifications-panel"
 
 const navLinks = [
   { label: "New in", href: "/arrival-new" },
@@ -210,6 +211,9 @@ export function Navbar() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Notifications */}
+            <NotificationsPanel />
 
             {/* Shopping bag */}
             <Link

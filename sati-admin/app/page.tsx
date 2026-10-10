@@ -8,7 +8,9 @@ import { DashboardOverview } from "@/components/dashboard-overview"
 import { ProductsManagement } from "@/components/products-management"
 import { OrdersManagement } from "@/components/orders-management"
 import { CustomersManagement } from "@/components/customers-management"
+import JournalManagement from "@/components/journal-mamagement"
 import { SettingsScreen } from "@/components/settings-screen"
+import { NotificationsManagement } from "@/components/notifications-management"
 import { adminApi, adminAuth } from "@/lib/admin-api"
 import type { Product, Order, User } from "@/lib/admin-api"
 
@@ -66,11 +68,13 @@ export default function AdminPage() {
   }, [refresh])
 
   const titleByTab: Record<string, string> = {
-    dashboard: "Dashboard",
-    products: "Products",
-    orders: "Orders",
-    customers: "Customers",
-    settings: "Store Settings",
+    dashboard:     "Dashboard",
+    products:      "Products",
+    orders:        "Orders",
+    customers:     "Customers",
+    journal:       "Journal",
+    notifications: "Notifications",
+    settings:      "Store Settings",
   }
 
   return (
@@ -92,6 +96,8 @@ export default function AdminPage() {
             )}
             {activeTab === "orders" && <OrdersManagement orders={orders} />}
             {activeTab === "customers" && <CustomersManagement users={users} />}
+            {activeTab === "journal" && <JournalManagement />}
+            {activeTab === "notifications" && <NotificationsManagement />}
             {activeTab === "settings" && <SettingsScreen />}
           </main>
         </div>

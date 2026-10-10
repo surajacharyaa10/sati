@@ -10,7 +10,7 @@ import { AddToBagButton } from "@/app/components/add-to-bag-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { productBadgeClasses } from "@/lib/product-badges"
-import { useProducts } from "@/lib/store-products"
+import { getProductGallery, useProducts } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
@@ -81,15 +81,39 @@ export default function WishlistPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-8 py-8 sm:gap-x-4 lg:grid-cols-4 lg:gap-x-6">
-              {wishlistProducts.map((product) => (
-                <Card key={product.id} className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
-                  <CardContent className="relative aspect-[4/5] p-0">
-                    <Link href={`/product/${product.id}`} aria-label={`View ${product.name}`} className="absolute inset-0">
-                      <Image src={product.image} alt={product.alt} fill sizes="(max-width: 639px) 48vw, 24vw" className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]" />
-                    </Link>
-                    <span className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
-                      {product.label}
-                    </span>
+              {wishlistProducts.map((product) => {
+                const gallery = getProductGallery(product)
+                const secondaryImage = gallery.length > 1 ? gallery[1] : null
+
+                return (
+                  <Card key={product.id} className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
+                    <CardContent className="relative aspect-[4/5] p-0">
+                      <Link href={`/product/${product.id}`} aria-label={`View ${product.name}`} className="absolute inset-0">
+                        <Image
+                          src={product.image}
+                          alt={product.alt}
+                          fill
+                          sizes="(max-width: 639px) 48vw, 24vw"
+                          className={`object-cover transition-all duration-500 group-hover/card:scale-[1.03] ${secondaryImage ? "group-hover/card:opacity-0" : ""}`}
+                        />
+                        {secondaryImage && (
+                          <Image
+                            src={secondaryImage.url}
+                            alt={secondaryImage.alt || product.alt}
+                            fill
+                            sizes="(max-width: 639px) 48vw, 24vw"
+                            className="object-cover transition-all duration-500 opacity-0 group-hover/card:opacity-100 group-hover/card:scale-[1.03]"
+                          />
+                        )}
+                      </Link>
+                      <span className={`absolute left-2.5 top-2.5 rounded-none px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
+                        {product.label}
+                      </span>
+                      {gallery.length > 1 && (
+                        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+                          <span>{gallery.length} photos</span>
+                        </div>
+                      )}
                     <Button
                       type="button"
                       variant="outline"
@@ -118,7 +142,8 @@ export default function WishlistPage() {
                     <div className="col-span-2 pt-2"><AddToBagButton product={product} /></div>
                   </CardHeader>
                 </Card>
-              ))}
+              )
+            })}
             </div>
           )}
         </section>

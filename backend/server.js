@@ -10,6 +10,8 @@ import collectionRoutes from './route/collections.js';
 import wishlistRoutes from './route/wishlist.js';
 import cartRoutes from './route/cart.js';
 import orderRoutes from './route/orders.js';
+import journalRoutes from './route/journal.js';
+import notificationRoutes from './route/notifications.js';
 
 dotenv.config();
 
@@ -41,6 +43,8 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/journal', journalRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

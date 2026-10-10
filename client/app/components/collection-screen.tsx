@@ -23,6 +23,7 @@ import {
 import { productBadgeClasses } from "@/lib/product-badges"
 import {
   fetchCollectionByKind,
+  getProductGallery,
   useProducts,
   type CollectionKind,
   type ProductCategory,
@@ -220,6 +221,9 @@ function CollectionProductCard({
 }) {
   const { isAuthenticated } = useAuth()
   const router = useRouter()
+  const gallery = getProductGallery(product)
+  const secondaryImage = gallery.length > 1 ? gallery[1] : null
+
   return (
     <Card className="group/card gap-0 rounded-sm bg-white py-0 text-[#171512] shadow-none ring-0">
       <CardContent className="relative aspect-[4/5] p-0">
@@ -230,12 +234,26 @@ function CollectionProductCard({
               alt={product.alt}
               fill
               sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
-              className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
+              className={`object-cover transition-all duration-500 group-hover/card:scale-[1.03] ${secondaryImage ? "group-hover/card:opacity-0" : ""}`}
             />
+            {secondaryImage && (
+              <Image
+                src={secondaryImage.url}
+                alt={secondaryImage.alt || product.alt}
+                fill
+                sizes="(max-width: 639px) 48vw, (max-width: 1023px) 46vw, 24vw"
+                className="object-cover transition-all duration-500 opacity-0 group-hover/card:opacity-100 group-hover/card:scale-[1.03]"
+              />
+            )}
           </Link>
           <Badge className={`absolute left-2.5 top-2.5 z-10 rounded-none px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${productBadgeClasses[product.label]}`}>
             {product.label}
           </Badge>
+          {gallery.length > 1 && (
+            <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+              <span>{gallery.length} photos</span>
+            </div>
+          )}
           <Button
             type="button"
             size="icon"

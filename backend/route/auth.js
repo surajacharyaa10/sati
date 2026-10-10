@@ -3,7 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 import User from '../module/user.js';
 import { avatarUpload, deleteAvatar, saveAvatar } from '../services/avatar.js';
 import { verifyPassword } from '../services/password.js';
-import { authenticate, endSession, startSession } from '../services/session.js';
+import { authenticate, endSession, isUserAdmin, startSession } from '../services/session.js';
 
 const router = express.Router();
 const authLimiter = rateLimit({
@@ -20,12 +20,31 @@ const authLimiter = rateLimit({
 	},
 });
 
-const publicUser = (user) => ({
-	id: user.id,
-	name: user.name,
-	email: user.email,
-	avatarUrl: user.avatarUrl ?? null,
-});
+const publicUser = (user, isAdminOverride) => {
+	const adminUsername = (process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+	const userEmail = (user.email || '').trim().toLowerCase();
+	const envEmails = (process.env.ADMIN_EMAILS || '')
+		.split(',')
+		.map((e) => e.trim().toLowerCase())
+		.filter(Boolean);
+	const allowedAdmins = [adminUsername, ...envEmails].filter(Boolean);
+
+	const isAdmin = Boolean(
+		isAdminOverride ||
+		user.role === 'admin' ||
+		(user.id && String(user.id).startsWith('admin-')) ||
+		(userEmail && allowedAdmins.includes(userEmail))
+	);
+
+	return {
+		id: user.id || user._id,
+		name: user.name,
+		email: user.email,
+		avatarUrl: user.avatarUrl ?? null,
+		role: isAdmin ? 'admin' : (user.role || 'customer'),
+		isAdmin,
+	};
+};
 
 const parseAvatar = (req, res, next) => {
 	avatarUpload.single('photo')(req, res, (error) => {
@@ -60,7 +79,7 @@ router.post('/signin', authLimiter, async (req, res) => {
 		};
 		
 		startSession(res, adminUser.id);
-		return res.json({ user: publicUser(adminUser) });
+		return res.json({ user: publicUser(adminUser, true) });
 	}
 
 	try {
@@ -87,7 +106,7 @@ router.get('/me', authenticate, async (req, res) => {
 			email: process.env.ADMIN_USERNAME,
 			avatarUrl: null
 		};
-		return res.json({ user: publicUser(adminUser) });
+		return res.json({ user: publicUser(adminUser, true) });
 	}
 
 	try {
@@ -179,6 +198,40 @@ router.patch('/profile', authenticate, parseAvatar, async (req, res) => {
 router.post('/signout', (_req, res) => {
 	endSession(res);
 	return res.status(204).end();
+});
+
+// Admin session check. Verifies hardcoded admin session or database admin user.
+router.get('/admin', authenticate, async (req, res) => {
+	const isAdmin = await isUserAdmin(req.authUserId);
+	if (!isAdmin) {
+		return res.status(403).json({ error: 'Admin access required' });
+	}
+
+	if (req.authUserId.startsWith('admin-')) {
+		return res.json({
+			user: {
+				id: req.authUserId,
+				name: 'Administrator',
+				email: process.env.ADMIN_USERNAME,
+				avatarUrl: null,
+				role: 'admin',
+				isAdmin: true,
+			},
+		});
+	}
+
+	try {
+		const user = await User.findById(req.authUserId);
+		if (!user) {
+			return res.status(404).json({ error: 'User not found' });
+		}
+		return res.json({
+			user: publicUser(user, true),
+		});
+	} catch (error) {
+		console.error('Admin verification failed:', error);
+		return res.status(500).json({ error: 'Unable to check admin status' });
+	}
 });
 
 export default router;

@@ -1,4 +1,10 @@
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001").replace(/\/+$/, "")
+// In the browser, use relative URLs so requests go through Next.js's own
+// origin and the session cookie (set by the same host via the rewrite proxy)
+// is forwarded correctly. In SSR contexts we fall back to the full backend URL.
+const API_BASE =
+  typeof window !== "undefined"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001").replace(/\/+$/, "")
 
 type FetchOptions = Omit<RequestInit, "body"> & { body?: unknown; _retry?: boolean }
 
@@ -22,6 +28,7 @@ export type Product = {
   alt: string
   stock: number
   active: boolean
+  images?: { url: string; alt?: string; size?: string; color?: string }[]
 }
 
 export type OrderItem = {
@@ -74,20 +81,21 @@ export function isCustomer(user: { email?: string | null }): boolean {
 }
 
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
-  const { _retry, body, ...init } = options
+  const { body, ...init } = options
+  const isFormData = body instanceof FormData
+  const headers: Record<string, string> = {
+    ...((init.headers as Record<string, string>) || {}),
+  }
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json"
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     ...init,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : (isFormData ? (body as BodyInit) : JSON.stringify(body)),
   })
-
-  if (response.status === 401 && !_retry) {
-    const refreshed = await request<T>(path, { ...init, body, _retry: true })
-    return refreshed
-  }
 
   const responseBody: unknown = await response.json().catch(() => null)
 
@@ -102,16 +110,69 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
   return responseBody as T
 }
 
+// Admin routes reject with 401 when the session cookie holds a customer JWT
+// (the admin account is authenticated from env credentials, not a customer
+// record). On that signal, sign in as admin (which sets the cookie) and retry
+// the original request once. The retry never re-signs in, so a failed
+// credential cannot loop.
+async function requestWithSessionRenewal<T>(path: string, options: FetchOptions = {}): Promise<T> {
+  try {
+    return await request<T>(path, options)
+  } catch (error) {
+    if (error instanceof Error && error.message === "Not signed in") {
+      await adminAuth.signIn({
+        email: process.env.NEXT_PUBLIC_ADMIN_USERNAME ?? "admin",
+        password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "",
+      })
+      return request<T>(path, options)
+    }
+    throw error
+  }
+}
+
+export type AdminUser = {
+  id: string
+  name: string
+  email: string
+  avatarUrl: string | null
+  role?: string
+  isAdmin?: boolean
+}
+
 export const adminAuth = {
-  me: () => request<{ user: { id: string; name: string; email: string; avatarUrl: string | null } }>(
-    "/api/auth/me",
-  ),
+  me: () => request<{ user: AdminUser }>("/api/auth/admin"),
   signIn: (credentials: { email: string; password: string }) =>
-    request<{ user: { id: string; name: string; email: string; avatarUrl: string | null } }>(
+    request<{ user: AdminUser }>(
       "/api/auth/signin",
       { method: "POST", body: credentials as unknown as BodyInit },
     ),
   signOut: () => request<void>("/api/auth/signout", { method: "POST" }),
+}
+
+export type JournalPost = {
+  slug: string
+  category: string
+  title: string
+  summary: string
+  readTime: string
+  image: string
+  alt: string
+  paragraphs: string[]
+  active?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type Notification = {
+  _id: string
+  title: string
+  text: string
+  image?: string
+  imageAlt?: string
+  type: "info" | "promo" | "alert"
+  active: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const adminApi = {
@@ -121,6 +182,11 @@ export const adminApi = {
       return request<Product[]>(`/api/products${qs}`)
     },
     get: (id: string) => request<Product>(`/api/products/${encodeURIComponent(id)}`),
+    upload: (body: FormData) =>
+      request<{ url: string }>("/api/products/upload", {
+        method: "POST",
+        body,
+      }),
     create: (body: Partial<Product>) =>
       request<Product>("/api/products", { method: "POST", body: body as unknown as BodyInit }),
     update: (id: string, body: Partial<Product>) =>
@@ -136,6 +202,36 @@ export const adminApi = {
   },
   users: {
     list: () => request<User[]>("/api/users").then((users) => users.filter(isCustomer)),
+  },
+  journal: {
+    list: () => request<JournalPost[]>("/api/journal"),
+    get: (slug: string) => request<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`),
+    create: (body: Partial<JournalPost>) =>
+      request<JournalPost>("/api/journal", { method: "POST", body: body as unknown as BodyInit }),
+    update: (slug: string, body: Partial<JournalPost>) =>
+      request<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`, {
+        method: "PUT",
+        body: body as unknown as BodyInit,
+      }),
+    upload: (body: FormData) =>
+      request<{ url: string }>("/api/journal/upload", {
+        method: "POST",
+        body,
+      }),
+    delete: (slug: string) => request<void>(`/api/journal/${encodeURIComponent(slug)}`, { method: "DELETE" }),
+  },
+  notifications: {
+    list: () => request<Notification[]>("/api/notifications/all"),
+    upload: (body: FormData) =>
+      request<{ url: string }>("/api/notifications/upload", { method: "POST", body }),
+    create: (body: Partial<Notification>) =>
+      request<Notification>("/api/notifications", { method: "POST", body: body as unknown as BodyInit }),
+    update: (id: string, body: Partial<Notification>) =>
+      request<Notification>(`/api/notifications/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: body as unknown as BodyInit,
+      }),
+    delete: (id: string) => request<{ success: boolean }>(`/api/notifications/${encodeURIComponent(id)}`, { method: "DELETE" }),
   },
   summary: async (): Promise<AdminSummary> => {
     const [products, orders, customers] = await Promise.all([

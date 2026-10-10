@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import User from '../module/user.js';
 
 const cookieName = 'sati_session';
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
@@ -58,3 +60,40 @@ export const authenticate = (req, res, next) => {
     return res.status(401).json({ error: 'Not signed in' });
   }
 };
+
+export const isUserAdmin = async (authUserId) => {
+  if (!authUserId) return false;
+  if (typeof authUserId === 'string' && authUserId.startsWith('admin-')) {
+    return true;
+  }
+  if (!mongoose.isValidObjectId(authUserId)) {
+    return false;
+  }
+  try {
+    const user = await User.findById(authUserId);
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+
+    const adminUsername = (process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const envEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    const allowedAdmins = [adminUsername, ...envEmails].filter(Boolean);
+    return allowedAdmins.includes(userEmail);
+  } catch (error) {
+    console.error('Error verifying admin permissions:', error);
+    return false;
+  }
+};
+
+// Allows both hardcoded admin- session IDs and database users with admin role/email
+export const requireAdmin = async (req, res, next) => {
+  if (await isUserAdmin(req.authUserId)) {
+    return next();
+  }
+  return res.status(403).json({ error: 'Admin access required' });
+};
+
