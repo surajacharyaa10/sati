@@ -144,7 +144,7 @@ export type AdminUser = {
 }
 
 export const adminAuth = {
-  me: () => request<{ user: AdminUser }>("/api/auth/admin"),
+  me: () => requestWithSessionRenewal<{ user: AdminUser }>("/api/auth/admin"),
   signIn: (credentials: { email: string; password: string }) =>
     request<{ user: AdminUser }>(
       "/api/auth/signin",

@@ -1,0 +1,32 @@
+{
+  "entries": {
+    "cmd-1791637232300": {
+      "key": "cmd-1791637232300",
+      "value": "{\"command\":\"rtk read /Users/suraj/Desktop/sati/backend/.env.example 2>/dev/null; echo \\\"---\\\"; rtk read /Users/suraj/Desktop/sati/vercel.json 2>/dev/null; echo \\\"---VC---\\\"; find /Users/suraj/Desktop/sati -maxdepth 2 -name \\\"vercel.json\\\" -o -maxdepth 2 -name \\\"*.config.ts\\\" -o -maxdepth 2 -name \\\"next.config*\\\" 2>/dev/null | rtk grep -v node_modules; echo \\\"---gitignore---\\\"; rtk read /Users/suraj/Desktop/sati/.gitignore\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:00:32.300Z",
+      "lastAccessed": "2026-10-10T13:00:32.300Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:00:32.300Z"
+    },
+    "cmd-1791637271484": {
+      "key": "cmd-1791637271484",
+      "value": "{\"command\":\"find /Users/suraj/Desktop/sati -maxdepth 1 -name \\\"package.json\\\" -o -maxdepth 1 -name \\\"vercel.json\\\" -o -maxdepth 1 -name \\\"tsconfig.json\\\" | rtk grep -v node_modules; echo \\\"---ROOT PKG---\\\"; rtk read /Users/suraj/Desktop/sati/package.json 2>/dev/null; echo \\\"---ROOT TSCONFIG---\\\"; rtk read /Users/suraj/Desktop/sati/tsconfig.json 2>/dev/null; echo \\\"---BACKEND TSCONFIG---\\\"; rtk read /Users/suraj/Desktop/sati/backend/tsconfig.json 2>/dev/null; echo \\\"---git log api---\\\"; git -C /Users/suraj/Desktop/sati log --oneline -- backend/api/products.ts 2>/dev/null | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:01:11.484Z",
+      "lastAccessed": "2026-10-10T13:01:11.484Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:01:11.484Z"
+    },
+    "cmd-1791637343478": {
+      "key": "cmd-1791637343478",
+      "value": "{\"command\":\"grep -rn \\\"api/products\\\" --include=\\\"*.js\\\" --include=\\\"*.ts\\\" --include=\\\"*.tsx\\\" . 2>/dev/null | grep -v node_modules | rtk grep -v \\\".next/\\\"; echo \\\"---refs to api/products.ts---\\\"; grep -rn \\\"from.*api/products\\\\|require.*api/products\\\" . 2>/dev/null | rtk grep -v node_modules; echo \\\"---git show---\\\"; git -C /Users/suraj/Desktop/sati show a973e54 --stat 2>/dev/null | grep -i \\\"products.ts\\\\|api/\\\" | head; echo \\\"---who added---\\\"; rtk git -C /Users/suraj/Desktop/sati log --oneline --all -- backend/api/products.ts 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:02:23.478Z",
+      "lastAccessed": "2026-10-10T13:02:23.478Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:02:23.478Z"
+    }
+  },
+  "version": "3.0.0"
+}
