@@ -1,6 +1,5 @@
 "use client"
 
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, Bell, ShieldCheck, LogOut } from "lucide-react"
 import { adminAuth } from "@/lib/admin-api"
@@ -16,9 +15,7 @@ export function AdminHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur">
-      <div className="flex items-center gap-4">
-        <SidebarTrigger className="h-9 w-9 rounded-lg border border-white/15 bg-black text-white hover:bg-white/10" />
-        <div className="h-4 w-px bg-white/15" />
+      <div className="flex items-center gap-3">
         <h1 className="font-serif text-xl font-medium tracking-tight text-foreground">{title}</h1>
       </div>
 

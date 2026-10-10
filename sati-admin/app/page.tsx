@@ -9,7 +9,6 @@ import { ProductsManagement } from "@/components/products-management"
 import { OrdersManagement } from "@/components/orders-management"
 import { CustomersManagement } from "@/components/customers-management"
 import JournalManagement from "@/components/journal-mamagement"
-import { SettingsScreen } from "@/components/settings-screen"
 import { NotificationsManagement } from "@/components/notifications-management"
 import { LiveChatManagement } from "@/components/live-chat-management"
 import { adminApi, adminAuth } from "@/lib/admin-api"
@@ -76,14 +75,13 @@ export default function AdminPage() {
     liveChat:      "Live Chat",
     journal:       "Journal",
     notifications: "Notifications",
-    settings:      "Store Settings",
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-svh w-full flex-col bg-black text-white">
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-svh w-full bg-black text-white">
         <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="flex min-h-svh flex-col lg:pl-(--sidebar-width)">
+        <div className="flex min-h-svh flex-1 flex-col min-w-0 bg-black text-white">
           <AdminHeader title={titleByTab[activeTab] ?? "SATI Admin"} onRefresh={refresh} isRefreshing={refreshing} />
           <main className="flex-1 overflow-y-auto bg-black p-6">
             {loadError && (
@@ -101,7 +99,6 @@ export default function AdminPage() {
             {activeTab === "liveChat" && <LiveChatManagement />}
             {activeTab === "journal" && <JournalManagement />}
             {activeTab === "notifications" && <NotificationsManagement />}
-            {activeTab === "settings" && <SettingsScreen />}
           </main>
         </div>
       </div>

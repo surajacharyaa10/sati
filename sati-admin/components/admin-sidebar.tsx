@@ -6,8 +6,6 @@ import {
   Package,
   ShoppingBag,
   Users,
-  Settings,
-  Store,
   LogOut,
   Sparkles,
   FileText,
@@ -22,7 +20,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { adminAuth, adminApi } from "@/lib/admin-api"
 
@@ -40,7 +37,6 @@ const items: NavItem[] = [
   { id: "liveChat",      title: "Live Chat",         icon: MessageSquare },
   { id: "journal",       title: "Journal",          icon: FileText },
   { id: "notifications", title: "Notifications",    icon: Bell },
-  { id: "settings",      title: "Store Settings",   icon: Settings },
 ]
 
 export function AdminSidebar({
@@ -77,20 +73,20 @@ export function AdminSidebar({
   }, [])
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+    <Sidebar collapsible="none" className="sticky top-0 h-svh w-64 shrink-0 border-r border-sidebar-border bg-sidebar flex flex-col">
       <SidebarHeader className="h-16 px-6 flex items-center border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e94717] text-white font-serif text-lg font-bold">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#e94717] text-white font-serif text-lg font-bold shadow-sm">
             S
           </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="font-serif text-base font-semibold tracking-tight">SATI Admin</span>
+          <div className="flex flex-col">
+            <span className="font-serif text-base font-semibold tracking-tight text-white">SATI Admin</span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Management</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="flex-1 px-3 py-4">
         <SidebarMenu className="space-y-1.5">
           {items.map((item) => {
             const Icon = item.icon
@@ -109,20 +105,12 @@ export function AdminSidebar({
                       : "text-zinc-400 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <div className="relative flex shrink-0 items-center justify-center">
-                    <Icon className="size-4" />
-                    {showChatBadge && (
-                      <span className="absolute -top-1 -right-1.5 flex size-2 group-data-[collapsible=icon]:block hidden">
-                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#e94717] opacity-75" />
-                        <span className="relative inline-flex size-2 rounded-full bg-[#e94717]" />
-                      </span>
-                    )}
-                  </div>
+                  <Icon className="size-4 shrink-0" />
                   <span className="truncate flex-1 text-left">{item.title}</span>
 
                   {showChatBadge && (
                     <span
-                      className={`ml-auto flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold group-data-[collapsible=icon]:hidden transition-all ${
+                      className={`ml-auto flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold transition-all ${
                         isActive
                           ? "bg-white text-[#e94717] shadow-xs"
                           : "bg-[#e94717] text-white shadow-[0_0_10px_rgba(233,71,23,0.5)] animate-pulse"
@@ -138,28 +126,7 @@ export function AdminSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-white/10">
-        <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
-          <div className="rounded-xl bg-zinc-900/60 p-3 text-xs">
-            <div className="flex items-center gap-1.5 font-semibold text-white">
-              <Sparkles className="size-3.5 text-[#e94717]" />
-              <span>SATI Store v1.0</span>
-            </div>
-            <p className="mt-1 text-[11px] text-zinc-400">Connected to live backend database.</p>
-          </div>
-          <a
-            href={process.env.NEXT_PUBLIC_CLIENT_URL ?? "http://localhost:3000"}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-10 w-full items-center justify-between rounded-lg px-3 text-xs font-semibold text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Store className="size-3.5" /> View Storefront
-            </span>
-            <span className="text-[10px] rounded bg-white/10 px-1.5 py-0.5">↗</span>
-          </a>
-        </div>
-      </SidebarFooter>
+  
     </Sidebar>
   )
 }
