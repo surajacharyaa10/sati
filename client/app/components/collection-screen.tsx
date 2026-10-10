@@ -210,7 +210,7 @@ export function CollectionScreen({ kind }: { kind: CollectionKind }) {
   )
 }
 
-function CollectionProductCard({
+export function CollectionProductCard({
   product,
   isFavorite,
   onToggleFavorite,

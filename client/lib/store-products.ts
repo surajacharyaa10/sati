@@ -70,6 +70,26 @@ export function getProductGallery(product: {
   return result
 }
 
+export function matchesSearch(product: StoreProduct, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const terms = q.split(/\s+/).filter(Boolean)
+  const searchableText = [
+    product.name,
+    product.category,
+    product.audience,
+    product.description,
+    product.details,
+    product.material,
+    product.fit,
+    product.label,
+    ...(product.colors || []),
+    ...(product.sizes || []),
+  ].filter(Boolean).join(" ").toLowerCase()
+
+  return terms.every((term) => searchableText.includes(term))
+}
+
 export type CollectionKind = "arrivals" | "women" | "men" | "sale"
 
 export type StoreCollection = {

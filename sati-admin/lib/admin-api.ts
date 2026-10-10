@@ -110,16 +110,20 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
   return responseBody as T
 }
 
-// Admin routes reject with 401 when the session cookie holds a customer JWT
-// (the admin account is authenticated from env credentials, not a customer
-// record). On that signal, sign in as admin (which sets the cookie) and retry
+// Admin routes reject with 401 ("Not signed in") when the session cookie is
+// missing or holds a customer JWT. They reject with 403 ("Admin access
+// required") when the session is valid but belongs to a customer account.
+// In either case, authenticate as admin (which sets the cookie) and retry
 // the original request once. The retry never re-signs in, so a failed
 // credential cannot loop.
 async function requestWithSessionRenewal<T>(path: string, options: FetchOptions = {}): Promise<T> {
   try {
     return await request<T>(path, options)
   } catch (error) {
-    if (error instanceof Error && error.message === "Not signed in") {
+    if (
+      error instanceof Error &&
+      (error.message === "Not signed in" || error.message === "Admin access required")
+    ) {
       await adminAuth.signIn({
         email: process.env.NEXT_PUBLIC_ADMIN_USERNAME ?? "admin",
         password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "",
@@ -179,59 +183,85 @@ export const adminApi = {
   products: {
     list: (query?: Record<string, string>) => {
       const qs = query ? "?" + new URLSearchParams(query).toString() : ""
-      return request<Product[]>(`/api/products${qs}`)
+      return requestWithSessionRenewal<Product[]>(`/api/products${qs}`)
     },
-    get: (id: string) => request<Product>(`/api/products/${encodeURIComponent(id)}`),
+    get: (id: string) =>
+      requestWithSessionRenewal<Product>(`/api/products/${encodeURIComponent(id)}`),
     upload: (body: FormData) =>
-      request<{ url: string }>("/api/products/upload", {
+      requestWithSessionRenewal<{ url: string }>("/api/products/upload", {
         method: "POST",
         body,
       }),
     create: (body: Partial<Product>) =>
-      request<Product>("/api/products", { method: "POST", body: body as unknown as BodyInit }),
+      requestWithSessionRenewal<Product>("/api/products", {
+        method: "POST",
+        body: body as unknown as BodyInit,
+      }),
     update: (id: string, body: Partial<Product>) =>
-      request<Product>(`/api/products/${encodeURIComponent(id)}`, {
+      requestWithSessionRenewal<Product>(`/api/products/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: body as unknown as BodyInit,
       }),
-    delete: (id: string) => request<void>(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    delete: (id: string) =>
+      requestWithSessionRenewal<void>(`/api/products/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
   },
   orders: {
-    list: () => request<Order[]>("/api/orders/me"),
-    get: (id: string) => request<Order>(`/api/orders/me/${encodeURIComponent(id)}`),
+    list: () => requestWithSessionRenewal<Order[]>("/api/orders/me"),
+    get: (id: string) =>
+      requestWithSessionRenewal<Order>(`/api/orders/me/${encodeURIComponent(id)}`),
   },
   users: {
-    list: () => request<User[]>("/api/users").then((users) => users.filter(isCustomer)),
+    list: () =>
+      requestWithSessionRenewal<User[]>("/api/users").then((users) => users.filter(isCustomer)),
   },
   journal: {
-    list: () => request<JournalPost[]>("/api/journal"),
-    get: (slug: string) => request<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`),
+    list: () => requestWithSessionRenewal<JournalPost[]>("/api/journal"),
+    get: (slug: string) =>
+      requestWithSessionRenewal<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`),
     create: (body: Partial<JournalPost>) =>
-      request<JournalPost>("/api/journal", { method: "POST", body: body as unknown as BodyInit }),
+      requestWithSessionRenewal<JournalPost>("/api/journal", {
+        method: "POST",
+        body: body as unknown as BodyInit,
+      }),
     update: (slug: string, body: Partial<JournalPost>) =>
-      request<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`, {
+      requestWithSessionRenewal<JournalPost>(`/api/journal/${encodeURIComponent(slug)}`, {
         method: "PUT",
         body: body as unknown as BodyInit,
       }),
     upload: (body: FormData) =>
-      request<{ url: string }>("/api/journal/upload", {
+      requestWithSessionRenewal<{ url: string }>("/api/journal/upload", {
         method: "POST",
         body,
       }),
-    delete: (slug: string) => request<void>(`/api/journal/${encodeURIComponent(slug)}`, { method: "DELETE" }),
+    delete: (slug: string) =>
+      requestWithSessionRenewal<void>(`/api/journal/${encodeURIComponent(slug)}`, {
+        method: "DELETE",
+      }),
   },
   notifications: {
-    list: () => request<Notification[]>("/api/notifications/all"),
+    list: () => requestWithSessionRenewal<Notification[]>("/api/notifications/all"),
     upload: (body: FormData) =>
-      request<{ url: string }>("/api/notifications/upload", { method: "POST", body }),
+      requestWithSessionRenewal<{ url: string }>("/api/notifications/upload", {
+        method: "POST",
+        body,
+      }),
     create: (body: Partial<Notification>) =>
-      request<Notification>("/api/notifications", { method: "POST", body: body as unknown as BodyInit }),
+      requestWithSessionRenewal<Notification>("/api/notifications", {
+        method: "POST",
+        body: body as unknown as BodyInit,
+      }),
     update: (id: string, body: Partial<Notification>) =>
-      request<Notification>(`/api/notifications/${encodeURIComponent(id)}`, {
+      requestWithSessionRenewal<Notification>(`/api/notifications/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: body as unknown as BodyInit,
       }),
-    delete: (id: string) => request<{ success: boolean }>(`/api/notifications/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    delete: (id: string) =>
+      requestWithSessionRenewal<{ success: boolean }>(
+        `/api/notifications/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      ),
   },
   summary: async (): Promise<AdminSummary> => {
     const [products, orders, customers] = await Promise.all([
