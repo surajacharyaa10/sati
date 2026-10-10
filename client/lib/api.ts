@@ -1,4 +1,4 @@
-export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001").replace(/\/+$/, "")
+export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "")
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown

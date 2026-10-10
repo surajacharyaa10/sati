@@ -7,22 +7,16 @@ const cookieName = 'sati_session';
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
 const developmentSecret = randomBytes(32).toString('hex');
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
 const getSigningSecret = () => {
-  if (process.env.JWT_SECRET) {
-    return process.env.JWT_SECRET;
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET must be configured in production');
-  }
-
-  return developmentSecret;
+  return process.env.JWT_SECRET || developmentSecret;
 };
 
 const sessionCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: sessionDurationMs,
   path: '/',
 });

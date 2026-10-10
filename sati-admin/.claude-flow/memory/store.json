@@ -1,0 +1,32 @@
+{
+  "entries": {
+    "cmd-1791637929582": {
+      "key": "cmd-1791637929582",
+      "value": "{\"command\":\"cd /Users/suraj/Desktop/sati/sati-admin && grep -rn \\\"from ['\\\\\\\"]\\\" lib/ --include=\\\"*.ts\\\" | grep -vE \\\"from ['\\\\\\\"](\\\\.\\\\./|\\\\./)\\\" | grep -vE \\\"from ['\\\\\\\"](next|react|@/)\\\" | head -20; echo \\\"---extensionless relative imports in sati-admin---\\\"; grep -rn \\\"from ['\\\\\\\"]\\\\.\\\\.\\\\?/\\\" lib/ --include=\\\"*.ts\\\" | grep -vE \\\"from ['\\\\\\\"]\\\\.\\\\.\\\\?/[^'\\\\\\\"]+\\\\.(js|ts|tsx|jsx)'\\\" | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:12:09.582Z",
+      "lastAccessed": "2026-10-10T13:12:09.582Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:12:09.582Z"
+    },
+    "cmd-1791637977612": {
+      "key": "cmd-1791637977612",
+      "value": "{\"command\":\"cat /Users/suraj/Desktop/sati/sati-admin/package.json 2>/dev/null | rtk grep -A30 '\\\"dependencies\\\"'; echo \\\"---cn in node_modules?---\\\"; rtk ls /Users/suraj/Desktop/sati/sati-admin/node_modules/cn 2>/dev/null && echo \\\"cn exists\\\" || echo \\\"cn MISSING\\\"; rtk ls /Users/suraj/Desktop/sati/sati-admin/node_modules/clsx 2>/dev/null && echo \\\"clsx exists\\\" || echo \\\"clsx MISSING\\\"; rtk ls /Users/suraj/Desktop/sati/sati-admin/node_modules/lucide-react 2>/dev/null >/dev/null && echo \\\"lucide exists\\\" || echo \\\"lucide MISSING\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:12:57.612Z",
+      "lastAccessed": "2026-10-10T13:12:57.612Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:12:57.612Z"
+    },
+    "cmd-1791638014437": {
+      "key": "cmd-1791638014437",
+      "value": "{\"command\":\"rtk ls node_modules/.bin/tsc 2>/dev/null && echo \\\"tsc available\\\" || echo \\\"no tsc\\\"; echo \\\"---tsconfig---\\\"; cat tsconfig.json 2>/dev/null | head -40\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:13:34.437Z",
+      "lastAccessed": "2026-10-10T13:13:34.437Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:13:34.437Z"
+    }
+  },
+  "version": "3.0.0"
+}

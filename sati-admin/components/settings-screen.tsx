@@ -26,7 +26,7 @@ export function SettingsScreen() {
   }
 
   const stats = [
-    { label: "API Server", value: "http://localhost:5001", icon: Server },
+    { label: "API Server", value: process.env.NEXT_PUBLIC_API_URL || "Configured via ENV", icon: Server },
     { label: "Database", value: "MongoDB", icon: Database },
     { label: "Auth", value: "JWT + httpOnly cookie", icon: Settings2 },
     { label: "Next Admin Panel", value: "Running on :3000", icon: Zap },

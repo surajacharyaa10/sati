@@ -87,7 +87,7 @@ export default function AdminPage() {
             {loadError && (
               <div className="mb-6 rounded-xl border border-red-500/40 bg-red-950/40 p-4 text-sm text-red-300">
                 <strong>Backend unreachable:</strong> {loadError}
-                <p className="mt-1 text-xs text-red-400">Ensure sati backend is running on :5001 with DATABASE_URL configured.</p>
+                <p className="mt-1 text-xs text-red-400">Ensure the backend server is running and reachable.</p>
               </div>
             )}
             {activeTab === "dashboard" && <DashboardOverview summary={summary} />}

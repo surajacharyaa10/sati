@@ -4,7 +4,7 @@
 const API_BASE =
   typeof window !== "undefined"
     ? ""
-    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001").replace(/\/+$/, "")
+    : (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
 
 type FetchOptions = Omit<RequestInit, "body"> & { body?: unknown; _retry?: boolean }
 
@@ -57,6 +57,7 @@ export type User = {
   _id: string
   name: string
   email: string
+  role?: string
   createdAt: string
   updatedAt: string
 }
@@ -72,12 +73,9 @@ export type AdminSummary = {
   recentOrders: Order[]
 }
 
-// The admin account is authenticated via environment credentials, not a
-// customer record. A stray user document with the admin email exists in the
-// database, so filter it out of customer-facing metrics and lists.
-export function isCustomer(user: { email?: string | null }): boolean {
-  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_USERNAME ?? "admin").trim().toLowerCase()
-  return (user.email ?? "").trim().toLowerCase() !== adminEmail
+// Filter customer-facing metrics and lists by role
+export function isCustomer(user: { email?: string | null; role?: string }): boolean {
+  return (user.role ?? "").trim().toLowerCase() !== "admin"
 }
 
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
@@ -110,25 +108,17 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
   return responseBody as T
 }
 
-// Admin routes reject with 401 ("Not signed in") when the session cookie is
-// missing or holds a customer JWT. They reject with 403 ("Admin access
-// required") when the session is valid but belongs to a customer account.
-// In either case, authenticate as admin (which sets the cookie) and retry
-// the original request once. The retry never re-signs in, so a failed
-// credential cannot loop.
+// Redirect to login if unauthenticated on admin routes
 async function requestWithSessionRenewal<T>(path: string, options: FetchOptions = {}): Promise<T> {
   try {
     return await request<T>(path, options)
   } catch (error) {
     if (
+      typeof window !== "undefined" &&
       error instanceof Error &&
       (error.message === "Not signed in" || error.message === "Admin access required")
     ) {
-      await adminAuth.signIn({
-        email: process.env.NEXT_PUBLIC_ADMIN_USERNAME ?? "admin",
-        password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "",
-      })
-      return request<T>(path, options)
+      window.location.replace("/login")
     }
     throw error
   }

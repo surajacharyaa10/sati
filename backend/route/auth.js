@@ -63,26 +63,29 @@ router.post('/signin', authLimiter, async (req, res) => {
 		return res.status(400).json({ error: 'Enter your email address and password' });
 	}
 
-	// Check for admin credentials from environment variables
-	const adminUsername = process.env.ADMIN_USERNAME;
-	const adminPassword = process.env.ADMIN_PASSWORD;
-	
-	if (adminUsername && adminPassword && 
-	    email.trim() === adminUsername && 
-	    password === adminPassword) {
-		// Create admin user object
-		const adminUser = {
-			id: 'admin-' + Date.now(), // Temporary ID for admin session
-			name: 'Administrator',
-			email: adminUsername,
-			avatarUrl: null
-		};
-		
-		startSession(res, adminUser.id);
-		return res.json({ user: publicUser(adminUser, true) });
-	}
-
 	try {
+		// Check for admin credentials strictly from environment variables
+		const adminUsername = process.env.ADMIN_USERNAME;
+		const adminPassword = process.env.ADMIN_PASSWORD;
+		
+		if (
+			adminUsername &&
+			adminPassword &&
+			email.trim().toLowerCase() === adminUsername.trim().toLowerCase() && 
+			password === adminPassword
+		) {
+			// Create admin user object
+			const adminUser = {
+				id: 'admin-' + Date.now(), // Temporary ID for admin session
+				name: 'Administrator',
+				email: adminUsername,
+				avatarUrl: null
+			};
+			
+			startSession(res, adminUser.id);
+			return res.json({ user: publicUser(adminUser, true) });
+		}
+
 		const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+passwordHash');
 		if (!user || !(await verifyPassword(password, user.passwordHash))) {
 			return res.status(401).json({ error: 'Email or password is incorrect' });
@@ -92,7 +95,7 @@ router.post('/signin', authLimiter, async (req, res) => {
 		return res.json({ user: publicUser(user) });
 	} catch (error) {
 		console.error('Sign-in failed:', error);
-		return res.status(503).json({ error: 'Sign-in is temporarily unavailable' });
+		return res.status(500).json({ error: 'Sign-in failed: ' + (error.message || 'Server error') });
 	}
 });
 

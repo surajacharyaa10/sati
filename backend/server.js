@@ -20,17 +20,26 @@ const app = express();
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN,
   process.env.ADMIN_ORIGIN,
-  'http://localhost:3000',
-  'http://localhost:3001',
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()) : []),
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    try {
+      const url = new URL(origin);
+      if (
+        url.hostname.endsWith('.vercel.app') ||
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1'
+      ) {
+        return callback(null, true);
+      }
+    } catch {
+      // ignore parse errors
     }
+    return callback(new Error(`CORS: Origin ${origin} not allowed`));
   },
   credentials: true,
 }));
@@ -63,3 +72,5 @@ connectDB().then(() => {
     console.log(`Server is running on port ${PORT}`);
   });
 });
+
+export default app;
