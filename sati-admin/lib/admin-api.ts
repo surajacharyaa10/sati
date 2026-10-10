@@ -182,6 +182,29 @@ export type Inquiry = {
   updatedAt?: string
 }
 
+export type ChatMsg = {
+  _id: string
+  sender: "customer" | "admin"
+  text: string
+  readByCustomer?: boolean
+  createdAt?: string
+}
+
+export type ChatSession = {
+  _id: string
+  productId: string
+  productName: string
+  customerName: string
+  customerEmail: string
+  userId?: string | null
+  status: "active" | "closed"
+  messages: ChatMsg[]
+  lastAdminReply?: string | null
+  lastActivity?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 export const adminApi = {
   products: {
     list: (query?: Record<string, string>) => {
@@ -326,6 +349,29 @@ export const adminApi = {
       }),
     remove: (id: string) =>
       requestWithSessionRenewal<{ success: boolean }>(`/api/chat/inquiries/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+  },
+
+  chatSessions: {
+    list: (status?: "active" | "closed") => {
+      const qs = status ? `?status=${status}` : ""
+      return requestWithSessionRenewal<ChatSession[]>(`/api/chat/sessions${qs}`)
+    },
+    get: (id: string) =>
+      requestWithSessionRenewal<ChatSession>(`/api/chat/sessions/${encodeURIComponent(id)}`),
+    reply: (id: string, text: string) =>
+      requestWithSessionRenewal<ChatSession>(`/api/chat/sessions/${encodeURIComponent(id)}/reply`, {
+        method: "POST",
+        body: { text } as unknown as BodyInit,
+      }),
+    setStatus: (id: string, status: ChatSession["status"]) =>
+      requestWithSessionRenewal<ChatSession>(`/api/chat/sessions/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { status } as unknown as BodyInit,
+      }),
+    remove: (id: string) =>
+      requestWithSessionRenewal<{ success: boolean }>(`/api/chat/sessions/${encodeURIComponent(id)}`, {
         method: "DELETE",
       }),
   },

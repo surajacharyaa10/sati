@@ -37,7 +37,7 @@ const items: NavItem[] = [
   { id: "products",      title: "Products",         icon: Package },
   { id: "orders",        title: "Orders",           icon: ShoppingBag },
   { id: "customers",     title: "Customers",        icon: Users },
-  { id: "inquiries",     title: "Inquiries",        icon: MessageSquare },
+  { id: "liveChat",      title: "Live Chat",         icon: MessageSquare },
   { id: "journal",       title: "Journal",          icon: FileText },
   { id: "notifications", title: "Notifications",    icon: Bell },
   { id: "settings",      title: "Store Settings",   icon: Settings },

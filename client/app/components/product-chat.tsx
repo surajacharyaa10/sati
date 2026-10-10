@@ -3,17 +3,16 @@
 import * as React from "react"
 import Image from "next/image"
 import {
-  MessageSquare,
   Sparkles,
   Send,
   User,
   ShoppingBag,
-  ArrowRight,
-  CheckCircle2,
   HelpCircle,
-  Mail,
+  MessageSquare,
   RefreshCw,
-  Info,
+  CheckCircle2,
+  XCircle,
+  Circle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +35,8 @@ import { getDiscountPercentage } from "@/lib/pricing"
 import { apiRequest } from "@/lib/api"
 import type { StoreProduct } from "@/lib/store-products"
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface ChatMessage {
   id: string
   sender: "user" | "assistant"
@@ -48,6 +49,25 @@ export interface ChatMessage {
   }[]
 }
 
+// Shape of a server ChatSession message
+interface LiveMsg {
+  _id: string
+  sender: "customer" | "admin"
+  text: string
+  readByCustomer?: boolean
+  createdAt?: string
+}
+
+interface LiveSession {
+  _id: string
+  productId: string
+  customerName: string
+  customerEmail: string
+  status: "active" | "closed"
+  messages: LiveMsg[]
+  lastActivity?: string
+}
+
 interface ProductChatProps {
   product: StoreProduct
   open?: boolean
@@ -55,6 +75,8 @@ interface ProductChatProps {
   onSelectColor?: (color: string) => void
   onSelectSize?: (size: string) => void
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const QUICK_QUESTIONS = [
   "How does the fit run?",
@@ -64,145 +86,95 @@ const QUICK_QUESTIONS = [
   "What is the return & shipping policy?",
 ]
 
-// Local fallback AI response generator (used when backend AI is unavailable)
-function generateAiFallback(query: string, product: StoreProduct): { text: string; actions?: ChatMessage["suggestedActions"] } {
-  const q = query.toLowerCase()
-  const discount = product.originalPrice ? getDiscountPercentage(product.originalPrice, product.price) : 0
+const SESSION_KEY = (productId: string) => `sati_chat_session_${productId}`
 
-  // 1. Sizing / Fit
-  if (
-    q.includes("fit") ||
-    q.includes("size") ||
-    q.includes("sizing") ||
-    q.includes("measure") ||
-    q.includes("true to size") ||
-    q.includes("tight") ||
-    q.includes("loose")
-  ) {
+function formatTime(iso?: string) {
+  if (!iso) return "Just now"
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+
+// ─── Local fallback AI (used when backend AI is unavailable) ──────────────────
+
+function generateAiFallback(
+  query: string,
+  product: StoreProduct
+): { text: string; actions?: ChatMessage["suggestedActions"] } {
+  const q = query.toLowerCase()
+  const discount = product.originalPrice
+    ? getDiscountPercentage(product.originalPrice, product.price)
+    : 0
+
+  if (q.includes("fit") || q.includes("size") || q.includes("sizing") || q.includes("measure")) {
     return {
-      text: `The ${product.name} is designed with a **${product.fit}**.\n\nAvailable sizes range from **${product.sizes[0]}** to **${product.sizes.at(-1)}** (${product.sizes.join(", ")}). It fits true to Sati's contemporary tailoring. If you prefer a more relaxed drape, consider sizing up one step.`,
+      text: `The ${product.name} is designed with a **${product.fit}**.\n\nAvailable sizes: **${product.sizes.join(", ")}**. Fits true to Sati's contemporary tailoring. Size up for a relaxed drape.`,
       actions: [
         { type: "quick_ask", label: "What fabric is it made of?" },
         { type: "add_to_cart", label: "Add to Bag" },
       ],
     }
   }
-
-  // 2. Material / Fabric / Care
-  if (
-    q.includes("fabric") ||
-    q.includes("material") ||
-    q.includes("care") ||
-    q.includes("wash") ||
-    q.includes("dry") ||
-    q.includes("cotton") ||
-    q.includes("linen") ||
-    q.includes("silk")
-  ) {
+  if (q.includes("fabric") || q.includes("material") || q.includes("care") || q.includes("wash")) {
     return {
-      text: `The ${product.name} is crafted from **${product.material}**.\n\n**Care Instructions:** Wash inside-out in cold or lukewarm water with mild detergent. Reshape gently while damp and dry flat away from direct sunlight to preserve the texture and color vibrancy.`,
+      text: `The ${product.name} is crafted from **${product.material}**.\n\n**Care:** Wash inside-out in cold water with mild detergent. Dry flat away from sunlight.`,
       actions: [
         { type: "quick_ask", label: "How should I style this piece?" },
         { type: "quick_ask", label: "What colors are available?" },
       ],
     }
   }
-
-  // 3. Styling / Pairing
-  if (
-    q.includes("style") ||
-    q.includes("wear") ||
-    q.includes("match") ||
-    q.includes("pair") ||
-    q.includes("outfit") ||
-    q.includes("look")
-  ) {
-    const stylingAdvice =
+  if (q.includes("style") || q.includes("wear") || q.includes("pair") || q.includes("outfit")) {
+    const advice =
       product.category === "Dresses"
-        ? "Pair with minimalist leather slides or tailored boots, layered with an oversized blazer for effortless transition from day to evening."
+        ? "Pair with minimalist leather slides or tailored boots, layered with an oversized blazer."
         : product.category === "Sets"
-        ? "Wear as a coordinated monochrome statement, or style the top and bottom separately with crisp denim or neutral linen separates."
+        ? "Wear as a coordinated monochrome statement, or mix the pieces separately with denim."
         : product.category === "Outerwear"
-        ? "Layer over a soft tonal knit top and straight-leg trousers for structured volume."
-        : "Tuck into relaxed trousers or wear untucked over pleated shorts for a modern silhouette."
-
+        ? "Layer over a soft tonal knit and straight-leg trousers for structured volume."
+        : "Tuck into relaxed trousers or wear untucked over pleated shorts."
     return {
-      text: `**Styling the ${product.name}:**\n\n${stylingAdvice}\n\nAvailable in rich shades: **${product.colors.join(", ")}**.`,
+      text: `**Styling the ${product.name}:**\n\n${advice}\n\nAvailable in: **${product.colors.join(", ")}**.`,
       actions: [
         { type: "quick_ask", label: "How does the fit run?" },
         { type: "add_to_cart", label: "Add to Bag" },
       ],
     }
   }
-
-  // 4. Colors & Varieties
-  if (q.includes("color") || q.includes("colour") || q.includes("shade") || q.includes("variety")) {
+  if (q.includes("color") || q.includes("colour") || q.includes("shade")) {
     return {
-      text: `The ${product.name} is currently offered in **${product.colors.length} palette options**: **${product.colors.join(", ")}**.\n\nAll colors are dyed with colorfast pigments to maintain saturation over time.`,
-      actions: [
-        { type: "quick_ask", label: "How does the fit run?" },
-      ],
+      text: `The ${product.name} is available in **${product.colors.length} options**: **${product.colors.join(", ")}**. All dyed with colorfast pigments.`,
+      actions: [{ type: "quick_ask", label: "How does the fit run?" }],
     }
   }
-
-  // 5. Price / Discount / Sale
-  if (
-    q.includes("price") ||
-    q.includes("cost") ||
-    q.includes("discount") ||
-    q.includes("sale") ||
-    q.includes("cheap") ||
-    q.includes("deal")
-  ) {
+  if (q.includes("price") || q.includes("cost") || q.includes("discount") || q.includes("sale")) {
     return {
-      text: `The current price for ${product.name} is **${formatRupees(product.price)}**${
+      text: `Current price: **${formatRupees(product.price)}**${
         product.originalPrice
-          ? ` (reduced from ${formatRupees(product.originalPrice)}, giving you a **${discount}% savings**)`
+          ? ` (was ${formatRupees(product.originalPrice)}, save **${discount}%**)`
           : ""
-      }.\n\nThis piece includes our premium finish guarantee and complimentary standard shipping on eligible orders.`,
-      actions: [
-        { type: "add_to_cart", label: "Add to Bag" },
-      ],
+      }. Includes complimentary standard shipping on eligible orders.`,
+      actions: [{ type: "add_to_cart", label: "Add to Bag" }],
     }
   }
-
-  // 6. Shipping & Return
-  if (
-    q.includes("ship") ||
-    q.includes("delivery") ||
-    q.includes("return") ||
-    q.includes("exchange") ||
-    q.includes("refund") ||
-    q.includes("days")
-  ) {
+  if (q.includes("ship") || q.includes("delivery") || q.includes("return") || q.includes("refund")) {
     return {
-      text: `📦 **Shipping & Returns for ${product.name}:**\n\n• **Shipping:** Free standard shipping on orders over ${formatRupees(120)}.\n• **Returns & Exchanges:** We offer easy 30-day hassle-free returns on unworn items with original tags intact.`,
-      actions: [
-        { type: "quick_ask", label: "How does the fit run?" },
-      ],
+      text: `📦 **Shipping & Returns:**\n\n• Free standard shipping on orders over ${formatRupees(120)}.\n• 30-day hassle-free returns on unworn items with original tags.`,
+      actions: [{ type: "quick_ask", label: "How does the fit run?" }],
     }
   }
-
-  // 7. General product details / description
-  if (q.includes("what is") || q.includes("about") || q.includes("tell me") || q.includes("detail")) {
-    return {
-      text: `**${product.name}** (${product.audience} · ${product.category}):\n\n${product.description}\n\n• **Material:** ${product.material}\n• **Fit:** ${product.fit}\n• **Sizes:** ${product.sizes.join(", ")}\n• **Colors:** ${product.colors.join(", ")}`,
-      actions: [
-        { type: "quick_ask", label: "How does the fit run?" },
-        { type: "quick_ask", label: "Fabric & Care instructions" },
-      ],
-    }
-  }
-
-  // Fallback: strictly focused on this product
   return {
-    text: `Regarding the **${product.name}**: It's a ${product.category.toLowerCase()} crafted with **${product.material}** in a **${product.fit}** for **${product.audience}** (${formatRupees(product.price)}).\n\nFeel free to ask me about sizing, fabric care, pairing advice, or return policies for this specific item!`,
+    text: `The **${product.name}** is a ${product.category.toLowerCase()} in **${product.material}** with a **${product.fit}** fit for **${product.audience}** (${formatRupees(product.price)}).\n\nAsk me about sizing, fabric, styling, or returns!`,
     actions: [
       { type: "quick_ask", label: "How does the fit run?" },
       { type: "quick_ask", label: "How should I style this piece?" },
     ],
   }
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProductChat({
   product,
@@ -214,30 +186,20 @@ export function ProductChat({
   const isOpen = isControlled ? controlledOpen : internalOpen
   const setIsOpen = React.useCallback(
     (next: boolean) => {
-      if (isControlled && controlledOnOpenChange) {
-        controlledOnOpenChange(next)
-      } else {
-        setInternalOpen(next)
-      }
+      if (isControlled && controlledOnOpenChange) controlledOnOpenChange(next)
+      else setInternalOpen(next)
     },
     [isControlled, controlledOnOpenChange]
   )
 
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
   const { addItem } = useCart()
 
   const [activeTab, setActiveTab] = React.useState<"ai" | "support">("ai")
+
+  // ── AI tab state ────────────────────────────────────────────────────────────
   const [inputMessage, setInputMessage] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
-
-  // Support inquiry form state
-  const [inquiryName, setInquiryName] = React.useState(user?.name || "")
-  const [inquiryEmail, setInquiryEmail] = React.useState(user?.email || "")
-  const [inquiryMessage, setInquiryMessage] = React.useState("")
-  const [isSubmittingInquiry, setIsSubmittingInquiry] = React.useState(false)
-  const [inquirySuccess, setInquirySuccess] = React.useState(false)
-  const [inquiryError, setInquiryError] = React.useState("")
-
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -251,24 +213,79 @@ export function ProductChat({
       ],
     },
   ])
+  const aiBottomRef = React.useRef<HTMLDivElement>(null)
 
-  const messagesEndRef = React.useRef<HTMLDivElement>(null)
+  // ── Live chat (support) tab state ────────────────────────────────────────────
+  const [liveName, setLiveName] = React.useState(user?.name ?? "")
+  const [liveEmail, setLiveEmail] = React.useState(user?.email ?? "")
+  const [liveInput, setLiveInput] = React.useState("")
+  const [liveSession, setLiveSession] = React.useState<LiveSession | null>(null)
+  const [liveStarting, setLiveStarting] = React.useState(false)
+  const [liveSending, setLiveSending] = React.useState(false)
+  const [liveError, setLiveError] = React.useState("")
+  const liveBottomRef = React.useRef<HTMLDivElement>(null)
+  const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Keep user info in sync if logged in
+  // Sync user info
   React.useEffect(() => {
     if (user) {
-      if (!inquiryName) setInquiryName(user.name)
-      if (!inquiryEmail) setInquiryEmail(user.email)
+      if (!liveName) setLiveName(user.name)
+      if (!liveEmail) setLiveEmail(user.email)
     }
-  }, [user, inquiryName, inquiryEmail])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Restore session from localStorage on mount
   React.useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      }, 100)
+    const saved = localStorage.getItem(SESSION_KEY(product.id))
+    if (saved) {
+      try {
+        const parsed: LiveSession = JSON.parse(saved)
+        if (parsed._id && parsed.status === "active") {
+          setLiveSession(parsed)
+        }
+      } catch {
+        // ignore
+      }
     }
-  }, [isOpen, messages, isTyping])
+  }, [product.id])
+
+  // Scroll AI chat to bottom
+  React.useEffect(() => {
+    if (isOpen && activeTab === "ai") {
+      setTimeout(() => aiBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    }
+  }, [isOpen, messages, isTyping, activeTab])
+
+  // Scroll live chat to bottom
+  React.useEffect(() => {
+    if (isOpen && activeTab === "support") {
+      setTimeout(() => liveBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    }
+  }, [isOpen, liveSession?.messages.length, activeTab])
+
+  // Poll for admin replies when session is active
+  React.useEffect(() => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    if (!liveSession || liveSession.status !== "active") return
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const updated = await apiRequest<LiveSession>(
+          `/api/chat/sessions/${encodeURIComponent(liveSession._id)}`
+        )
+        setLiveSession(updated)
+        localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(updated))
+      } catch {
+        // silently ignore poll failures
+      }
+    }, 3500)
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [liveSession?._id, liveSession?.status, product.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── AI message send ─────────────────────────────────────────────────────────
 
   function handleSendMessage(textToSend?: string) {
     const text = (textToSend ?? inputMessage).trim()
@@ -280,18 +297,15 @@ export function ProductChat({
       text,
       timestamp: "Just now",
     }
-
     setMessages((prev) => [...prev, userMsg])
     setInputMessage("")
     setIsTyping(true)
 
-    // Build message history for API (only role/content pairs)
     const history = messages
-      .slice(-8) // Keep recent context
+      .slice(-8)
       .map((m) => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text }))
     history.push({ role: "user", content: text })
 
-    // Try backend AI, fallback to local rule-based response
     apiRequest<{ reply: string }>("/api/chat", {
       method: "POST",
       body: {
@@ -312,41 +326,46 @@ export function ProductChat({
       },
     })
       .then(({ reply }) => {
-        const assistantMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          sender: "assistant",
-          text: reply,
-          timestamp: "Just now",
-          // Suggest add-to-cart if response mentions sizing or colors
-          suggestedActions: reply.toLowerCase().includes("bag") || reply.toLowerCase().includes("add")
-            ? [{ type: "add_to_cart", label: "Add to Bag" }]
-            : [
-                { type: "quick_ask", label: "How does the fit run?" },
-                { type: "quick_ask", label: "How should I style this piece?" },
-              ],
-        }
-        setMessages((prev) => [...prev, assistantMsg])
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            sender: "assistant",
+            text: reply,
+            timestamp: "Just now",
+            suggestedActions:
+              reply.toLowerCase().includes("live chat") || reply.toLowerCase().includes("admin")
+                ? [{ type: "quick_ask", label: "Switch to Live Chat →" }]
+                : [
+                    { type: "quick_ask", label: "How does the fit run?" },
+                    { type: "quick_ask", label: "How should I style this piece?" },
+                  ],
+          },
+        ])
       })
       .catch(() => {
-        // Fallback to local rule-based AI
         const response = generateAiFallback(text, product)
-        const assistantMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          sender: "assistant",
-          text: response.text,
-          timestamp: "Just now",
-          suggestedActions: response.actions,
-        }
-        setMessages((prev) => [...prev, assistantMsg])
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            sender: "assistant",
+            text: response.text,
+            timestamp: "Just now",
+            suggestedActions: response.actions,
+          },
+        ])
       })
-      .finally(() => {
-        setIsTyping(false)
-      })
+      .finally(() => setIsTyping(false))
   }
 
   function handleActionClick(action: NonNullable<ChatMessage["suggestedActions"]>[number]) {
     if (action.type === "quick_ask") {
-      handleSendMessage(action.label)
+      if (action.label === "Switch to Live Chat →") {
+        setActiveTab("support")
+      } else {
+        handleSendMessage(action.label)
+      }
     } else if (action.type === "add_to_cart") {
       addItem({
         id: `${product.id}:${product.colors[0]}:${product.sizes[0]}`,
@@ -358,47 +377,88 @@ export function ProductChat({
         color: product.colors[0],
         size: product.sizes[0],
       })
-      const confirmMsg: ChatMessage = {
-        id: `confirm-${Date.now()}`,
-        sender: "assistant",
-        text: `✓ I've added **${product.name}** (${product.colors[0]}, Size ${product.sizes[0]}) to your bag! You can review it anytime from your shopping cart.`,
-        timestamp: "Just now",
-      }
-      setMessages((prev) => [...prev, confirmMsg])
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `confirm-${Date.now()}`,
+          sender: "assistant",
+          text: `✓ Added **${product.name}** (${product.colors[0]}, Size ${product.sizes[0]}) to your bag!`,
+          timestamp: "Just now",
+        },
+      ])
     }
   }
 
-  async function handleInquirySubmit(e: React.FormEvent) {
+  // ── Live chat: start session ─────────────────────────────────────────────────
+
+  async function handleStartChat(e: React.FormEvent) {
     e.preventDefault()
-    setInquiryError("")
-    if (!inquiryName.trim() || !inquiryEmail.trim() || !inquiryMessage.trim()) {
-      setInquiryError("Please fill out your name, email, and question.")
+    setLiveError("")
+    if (!liveName.trim() || !liveEmail.trim() || !liveInput.trim()) {
+      setLiveError("Please fill in your name, email, and first message.")
       return
     }
-
-    setIsSubmittingInquiry(true)
+    setLiveStarting(true)
     try {
-      await apiRequest(`/api/products/${encodeURIComponent(product.id)}/inquiry`, {
+      const session = await apiRequest<LiveSession>("/api/chat/sessions", {
         method: "POST",
         body: {
+          productId: product.id,
           productName: product.name,
-          customerName: inquiryName.trim(),
-          customerEmail: inquiryEmail.trim(),
-          message: inquiryMessage.trim(),
+          customerName: liveName.trim(),
+          customerEmail: liveEmail.trim(),
+          message: liveInput.trim(),
+          userId: user?.id ?? null,
         },
       })
-      setInquirySuccess(true)
-      setInquiryMessage("")
+      setLiveSession(session)
+      setLiveInput("")
+      localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(session))
     } catch (err) {
-      setInquiryError(err instanceof Error ? err.message : "Failed to send inquiry. Please try again.")
+      setLiveError(err instanceof Error ? err.message : "Failed to start chat. Try again.")
     } finally {
-      setIsSubmittingInquiry(false)
+      setLiveStarting(false)
     }
   }
+
+  // ── Live chat: send follow-up ────────────────────────────────────────────────
+
+  async function handleLiveSend(e: React.FormEvent) {
+    e.preventDefault()
+    if (!liveSession || !liveInput.trim() || liveSending) return
+    setLiveSending(true)
+    setLiveError("")
+    try {
+      const updated = await apiRequest<LiveSession>(
+        `/api/chat/sessions/${encodeURIComponent(liveSession._id)}/messages`,
+        { method: "POST", body: { text: liveInput.trim() } }
+      )
+      setLiveSession(updated)
+      setLiveInput("")
+      localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(updated))
+    } catch (err) {
+      setLiveError(err instanceof Error ? err.message : "Failed to send. Try again.")
+    } finally {
+      setLiveSending(false)
+    }
+  }
+
+  function handleEndSession() {
+    localStorage.removeItem(SESSION_KEY(product.id))
+    setLiveSession(null)
+    setLiveInput("")
+    setLiveError("")
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  const hasNewAdminReply =
+    liveSession &&
+    liveSession.messages.some((m) => m.sender === "admin" && !m.readByCustomer)
 
   return (
     <>
-      {/* Floating Chat Trigger Button */}
+      {/* Floating Chat Trigger */}
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
           <Button
@@ -412,6 +472,7 @@ export function ProductChat({
             </div>
             <span className="hidden sm:inline">Ask about this product</span>
             <span className="inline sm:hidden">Chat</span>
+            {/* Live indicator dot */}
             <span className="absolute -top-1 -right-1 flex size-3.5">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#e94717] opacity-75" />
               <span className="relative inline-flex size-3.5 rounded-full border-2 border-[#171512] bg-[#e94717]" />
@@ -420,13 +481,13 @@ export function ProductChat({
         </div>
       )}
 
-      {/* Main Chat Sheet Component */}
+      {/* Main Chat Sheet */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent
           side="right"
           className="flex h-full w-full flex-col border-l border-black/10 bg-[#fbf9f5] p-0 sm:max-w-md md:max-w-lg"
         >
-          {/* Sheet Header */}
+          {/* Header */}
           <SheetHeader className="border-b border-black/10 bg-[#f7f3eb] px-5 py-4">
             <div className="flex items-center gap-3">
               <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e94717] text-white shadow-sm font-serif text-lg font-bold">
@@ -439,16 +500,14 @@ export function ProductChat({
                     Sati Product Assistant
                   </SheetTitle>
                   <Badge variant="secondary" className="bg-[#171512]/5 text-[10px] text-[#706c66]">
-                    Live Scoped
+                    Live
                   </Badge>
                 </div>
-                <p className="text-xs text-[#706c66]">
-                  Assisting with sizing, fabric, and styling
-                </p>
+                <p className="text-xs text-[#706c66]">AI Stylist + Live Admin Chat</p>
               </div>
             </div>
 
-            {/* Scoped Product Mini-Card Banner */}
+            {/* Product mini-card */}
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-black/10 bg-white/90 p-2.5 shadow-xs">
               <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-[#f2eee8]">
                 <Image
@@ -480,7 +539,7 @@ export function ProductChat({
               </Badge>
             </div>
 
-            {/* Mode Switcher Tabs */}
+            {/* Tab switcher */}
             <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-black/10 bg-black/5 p-1 text-xs">
               <button
                 type="button"
@@ -497,22 +556,24 @@ export function ProductChat({
               <button
                 type="button"
                 onClick={() => setActiveTab("support")}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 font-semibold transition ${
+                className={`relative flex items-center justify-center gap-1.5 rounded-md py-1.5 font-semibold transition ${
                   activeTab === "support"
                     ? "bg-white text-[#171512] shadow-xs"
                     : "text-[#706c66] hover:text-[#171512]"
                 }`}
               >
-                <Mail className="size-3.5 text-[#706c66]" />
-                Store Support
+                <MessageSquare className="size-3.5" />
+                Live Chat
+                {(hasNewAdminReply || (liveSession && !activeTab)) && (
+                  <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[#e94717]" />
+                )}
               </button>
             </div>
           </SheetHeader>
 
-          {/* TAB 1: AI Stylist Chat Mode */}
+          {/* ── TAB 1: AI Stylist ── */}
           {activeTab === "ai" && (
             <div className="flex flex-1 flex-col overflow-hidden">
-              {/* Message History */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((msg) => (
                   <Message key={msg.id} align={msg.sender === "user" ? "end" : "start"}>
@@ -526,7 +587,6 @@ export function ProductChat({
                         <User className="size-3.5" />
                       </MessageAvatar>
                     )}
-
                     <MessageContent className="max-w-[85%]">
                       <Bubble
                         variant={msg.sender === "user" ? "default" : "secondary"}
@@ -540,13 +600,17 @@ export function ProductChat({
                           {msg.text.split("\n\n").map((para, i) => (
                             <p key={i}>
                               {para.split("**").map((chunk, j) =>
-                                j % 2 === 1 ? <strong key={j} className="font-semibold text-[#171512]">{chunk}</strong> : chunk
+                                j % 2 === 1 ? (
+                                  <strong key={j} className="font-semibold">
+                                    {chunk}
+                                  </strong>
+                                ) : (
+                                  chunk
+                                )
                               )}
                             </p>
                           ))}
                         </div>
-
-                        {/* Interactive Suggestion Actions */}
                         {msg.suggestedActions && msg.suggestedActions.length > 0 && (
                           <div className="mt-2.5 flex flex-wrap gap-1.5 pt-1 border-t border-black/5">
                             {msg.suggestedActions.map((action, idx) => (
@@ -576,7 +640,6 @@ export function ProductChat({
                   </Message>
                 ))}
 
-                {/* Typing Indicator */}
                 {isTyping && (
                   <Message align="start">
                     <MessageAvatar className="size-7 rounded-full bg-[#e94717] text-[11px] font-bold text-white shadow-xs">
@@ -591,15 +654,20 @@ export function ProductChat({
                     </MessageContent>
                   </Message>
                 )}
-
-                <div ref={messagesEndRef} />
+                <div ref={aiBottomRef} />
               </div>
 
-              {/* Quick Questions Chips Carousel */}
+              {/* Suggested chips */}
               <div className="border-t border-black/10 bg-[#f7f3eb] px-4 py-2.5">
                 <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-[#706c66]">
                   <span>Suggested Questions</span>
-                  <span className="text-[10px] text-[#8b867e]">Tap to ask</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("support")}
+                    className="text-[10px] text-[#e94717] hover:underline"
+                  >
+                    Chat with admin →
+                  </button>
                 </div>
                 <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                   {QUICK_QUESTIONS.map((chip, idx) => (
@@ -607,7 +675,7 @@ export function ProductChat({
                       key={idx}
                       type="button"
                       onClick={() => handleSendMessage(chip)}
-                      className="shrink-0 rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-medium text-[#171512] transition hover:border-[#e94717] hover:bg-white hover:text-[#e94717] active:scale-95"
+                      className="shrink-0 rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-medium text-[#171512] transition hover:border-[#e94717] hover:text-[#e94717] active:scale-95"
                     >
                       {chip}
                     </button>
@@ -615,20 +683,17 @@ export function ProductChat({
                 </div>
               </div>
 
-              {/* Chat Input Bar */}
+              {/* Input */}
               <div className="border-t border-black/10 bg-white p-3.5">
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }}
+                  onSubmit={(e) => { e.preventDefault(); handleSendMessage() }}
                   className="flex items-center gap-2 rounded-full border border-black/15 bg-[#f7f3eb] px-3.5 py-1.5 focus-within:border-[#e94717] focus-within:ring-2 focus-within:ring-[#e94717]/20"
                 >
                   <input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder={`Ask about ${product.name} (fit, fabric, style)…`}
+                    placeholder={`Ask about ${product.name}…`}
                     className="flex-1 bg-transparent text-xs text-[#171512] outline-none placeholder:text-[#8b867e]"
                   />
                   <Button
@@ -642,112 +707,237 @@ export function ProductChat({
                   </Button>
                 </form>
                 <p className="mt-1.5 text-center text-[10px] text-[#8b867e]">
-                  Answers are personalized to {product.name}&apos;s specifications and care guide.
+                  Powered by AI · Scoped to {product.name}
                 </p>
               </div>
             </div>
           )}
 
-          {/* TAB 2: Store Support Inquiry Mode */}
+          {/* ── TAB 2: Live Chat with Admin ── */}
           {activeTab === "support" && (
-            <div className="flex flex-1 flex-col overflow-y-auto p-5">
-              <div className="mb-4 rounded-xl border border-black/10 bg-white p-4 shadow-xs">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#171512]">
-                  <Info className="size-4 text-[#e94717]" />
-                  Direct Product Inquiry
-                </div>
-                <p className="mt-1 text-xs text-[#706c66] leading-relaxed">
-                  Have a specific question about customization, preorder, or bulk sizing for the <strong>{product.name}</strong>? Leave a message directly for our store team.
-                </p>
-              </div>
-
-              {inquirySuccess ? (
-                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <CheckCircle2 className="size-8" />
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {!liveSession ? (
+                /* ── Start a new session ── */
+                <div className="flex-1 overflow-y-auto p-5">
+                  {/* Info banner */}
+                  <div className="mb-4 rounded-xl border border-black/10 bg-white p-4 shadow-xs">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#171512]">
+                      <MessageSquare className="size-4 text-[#e94717]" />
+                      Live Chat with Our Team
+                    </div>
+                    <p className="mt-1 text-xs text-[#706c66] leading-relaxed">
+                      Chat directly with the SATI team about <strong>{product.name}</strong> — sizing, custom orders, bulk enquiries, or anything the AI couldn&apos;t answer.
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600">
+                      <Circle className="size-2 fill-current" />
+                      Team typically replies within a few hours
+                    </div>
                   </div>
-                  <h3 className="mt-3 font-serif text-lg font-medium text-[#171512]">
-                    Inquiry Received!
-                  </h3>
-                  <p className="mt-1.5 max-w-xs text-xs text-[#706c66]">
-                    Our support team has logged your inquiry regarding <strong>{product.name}</strong> and will get back to you shortly via email.
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setInquirySuccess(false)
-                      setActiveTab("ai")
-                    }}
-                    className="mt-5 rounded-full bg-[#171512] px-6 text-xs text-white hover:bg-[#e94717]"
-                  >
-                    Back to AI Stylist
-                  </Button>
+
+                  <form onSubmit={handleStartChat} className="space-y-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#171512]">Your Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={liveName}
+                        onChange={(e) => setLiveName(e.target.value)}
+                        placeholder="e.g. Maya Sharma"
+                        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#171512]">Your Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={liveEmail}
+                        onChange={(e) => setLiveEmail(e.target.value)}
+                        placeholder="e.g. you@example.com"
+                        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#171512]">
+                        Your first message
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={liveInput}
+                        onChange={(e) => setLiveInput(e.target.value)}
+                        placeholder={`What would you like to know about ${product.name}?`}
+                        className="mt-1.5 w-full rounded-lg border border-black/15 bg-white p-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
+                      />
+                    </div>
+
+                    {liveError && (
+                      <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-center text-xs text-red-600">
+                        {liveError}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={liveStarting}
+                      className="h-11 w-full rounded-full bg-[#e94717] text-xs font-semibold text-white hover:bg-[#d03e12] disabled:opacity-50"
+                    >
+                      {liveStarting ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="size-3.5 animate-spin" />
+                          Starting chat…
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <MessageSquare className="size-3.5" />
+                          Start Live Chat
+                        </span>
+                      )}
+                    </Button>
+                  </form>
                 </div>
               ) : (
-                <form onSubmit={handleInquirySubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#171512]">
-                      Your Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={inquiryName}
-                      onChange={(e) => setInquiryName(e.target.value)}
-                      placeholder="e.g. Maya Sharma"
-                      className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#171512]">
-                      Your Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={inquiryEmail}
-                      onChange={(e) => setInquiryEmail(e.target.value)}
-                      placeholder="e.g. you@example.com"
-                      className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#171512]">
-                      Your Question about {product.name}
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={inquiryMessage}
-                      onChange={(e) => setInquiryMessage(e.target.value)}
-                      placeholder={`Ask our stylists or team about sizing, alterations, shipping speed for ${product.name}…`}
-                      className="mt-1.5 w-full rounded-lg border border-black/15 bg-white p-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                    />
-                  </div>
-
-                  {inquiryError && (
-                    <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-center text-xs text-red-600">
-                      {inquiryError}
-                    </p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmittingInquiry}
-                    className="h-11 w-full rounded-full bg-[#e94717] text-xs font-semibold text-white hover:bg-[#d03e12] disabled:opacity-50"
-                  >
-                    {isSubmittingInquiry ? (
-                      <span className="flex items-center gap-2">
-                        <RefreshCw className="size-3.5 animate-spin" />
-                        Submitting inquiry…
+                /* ── Active chat thread ── */
+                <>
+                  {/* Thread header */}
+                  <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-[#f7f3eb] px-4 py-2.5">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${
+                          liveSession.status === "active"
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                            : "border-zinc-300 bg-zinc-100 text-zinc-500"
+                        }`}
+                      >
+                        <Circle
+                          className={`size-1.5 fill-current ${
+                            liveSession.status === "active" ? "text-emerald-500" : "text-zinc-400"
+                          }`}
+                        />
+                        {liveSession.status === "active" ? "Live — Admin can see this" : "Closed"}
                       </span>
-                    ) : (
-                      "Send Message to Store Team"
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleEndSession}
+                      className="flex items-center gap-1 rounded-lg border border-black/10 px-2.5 py-1 text-[11px] text-[#706c66] hover:border-red-300 hover:text-red-500 transition"
+                    >
+                      <XCircle className="size-3" />
+                      End & Clear
+                    </button>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto space-y-3 p-4">
+                    {liveSession.messages.map((msg) => {
+                      const isCustomer = msg.sender === "customer"
+                      return (
+                        <div key={msg._id} className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
+                          {!isCustomer && (
+                            <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
+                              S
+                            </div>
+                          )}
+                          <div
+                            className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                              isCustomer
+                                ? "rounded-tr-xs bg-[#171512] text-white"
+                                : "rounded-tl-xs border border-black/10 bg-white text-[#171512] shadow-xs"
+                            }`}
+                          >
+                            {!isCustomer && (
+                              <p className="mb-1 text-[10px] font-bold text-[#e94717]">SATI Team</p>
+                            )}
+                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                            <p
+                              className={`mt-1 text-right text-[10px] ${
+                                isCustomer ? "text-white/50" : "text-[#8b867e]"
+                              }`}
+                            >
+                              {formatTime(msg.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Waiting indicator */}
+                    {liveSession.status === "active" &&
+                      liveSession.messages.at(-1)?.sender === "customer" && (
+                        <div className="flex justify-start">
+                          <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
+                            S
+                          </div>
+                          <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-black/10 bg-white px-3.5 py-3 text-xs text-[#8b867e] shadow-xs">
+                            <RefreshCw className="size-3 animate-spin text-[#e94717]" />
+                            Waiting for admin reply…
+                          </div>
+                        </div>
+                      )}
+
+                    {liveSession.status === "closed" && (
+                      <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-[#f7f3eb] p-3 text-xs text-[#706c66]">
+                        <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                        This chat has been closed by the admin. Start a new chat if you have more questions.
+                      </div>
                     )}
-                  </Button>
-                </form>
+
+                    <div ref={liveBottomRef} />
+                  </div>
+
+                  {/* Input */}
+                  {liveSession.status === "active" ? (
+                    <div className="border-t border-black/10 bg-white p-3.5">
+                      <form
+                        onSubmit={handleLiveSend}
+                        className="flex items-center gap-2 rounded-full border border-black/15 bg-[#f7f3eb] px-3.5 py-1.5 focus-within:border-[#e94717] focus-within:ring-2 focus-within:ring-[#e94717]/20"
+                      >
+                        <input
+                          type="text"
+                          value={liveInput}
+                          onChange={(e) => setLiveInput(e.target.value)}
+                          placeholder="Type a message to the SATI team…"
+                          className="flex-1 bg-transparent text-xs text-[#171512] outline-none placeholder:text-[#8b867e]"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault()
+                              handleLiveSend(e)
+                            }
+                          }}
+                        />
+                        <Button
+                          type="submit"
+                          disabled={!liveInput.trim() || liveSending}
+                          size="icon-sm"
+                          className="size-7 rounded-full bg-[#171512] text-white hover:bg-[#e94717] disabled:opacity-30"
+                          aria-label="Send message"
+                        >
+                          {liveSending ? (
+                            <RefreshCw className="size-3 animate-spin" />
+                          ) : (
+                            <Send className="size-3" />
+                          )}
+                        </Button>
+                      </form>
+                      {liveError && (
+                        <p className="mt-1 text-center text-[10px] text-red-500">{liveError}</p>
+                      )}
+                      <p className="mt-1.5 text-center text-[10px] text-[#8b867e]">
+                        Messages are delivered live to the SATI admin dashboard
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-t border-black/10 bg-white p-4">
+                      <Button
+                        type="button"
+                        onClick={handleEndSession}
+                        className="h-10 w-full rounded-full bg-[#171512] text-xs font-semibold text-white hover:bg-[#e94717]"
+                      >
+                        Start a New Chat
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
