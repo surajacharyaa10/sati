@@ -9,6 +9,7 @@ import {
 import { productEnums } from '../module/product.js';
 import { authenticate, requireAdmin } from '../services/session.js';
 import { productUpload, saveProductImage } from '../services/productImage.js';
+import Inquiry from '../module/inquiry.js';
 
 const router = express.Router();
 
@@ -70,6 +71,38 @@ router.get('/:id', async (req, res, next) => {
     const product = await getProductById(req.params.id);
     if (!product) return res.status(404).json({ error: 'Not found' });
     return res.json(product);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Public: submit customer inquiry for this product
+router.post('/:id/inquiry', async (req, res, next) => {
+  try {
+    const { customerName, customerEmail, message, productName } = req.body ?? {};
+    if (!customerName || !customerEmail || !message) {
+      return res.status(400).json({ error: 'Name, email, and message are required' });
+    }
+
+    const inquiry = await Inquiry.create({
+      productId: req.params.id,
+      productName: productName || req.params.id,
+      customerName: String(customerName).trim(),
+      customerEmail: String(customerEmail).trim().toLowerCase(),
+      message: String(message).trim(),
+    });
+
+    return res.status(201).json({ success: true, inquiryId: inquiry._id });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Admin: list inquiries for this product
+router.get('/:id/inquiries', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const inquiries = await Inquiry.find({ productId: req.params.id }).sort({ createdAt: -1 });
+    return res.json(inquiries);
   } catch (error) {
     return next(error);
   }

@@ -26,6 +26,105 @@
       "lastAccessed": "2026-10-10T13:02:23.478Z",
       "accessCount": 0,
       "expiresAt": "2026-11-09T13:02:23.478Z"
+    },
+    "cmd-1791637443061": {
+      "key": "cmd-1791637443061",
+      "value": "{\"command\":\"rtk find /Users/suraj/Desktop/sati/backend -name \\\"*.ts\\\" -not -path \\\"*/node_modules/*\\\"; echo \\\"---refs in whole repo (excluding node_modules/.next)---\\\"; grep -rn \\\"products.ts\\\\|api/products\\\" /Users/suraj/Desktop/sati --include=\\\"*.js\\\" --include=\\\"*.ts\\\" --include=\\\"*.tsx\\\" --include=\\\"*.json\\\" --include=\\\"*.yaml\\\" --include=\\\"*.yml\\\" 2>/dev/null | grep -v node_modules | rtk grep -v \\\"/.next/\\\"; echo \\\"---git status---\\\"; rtk git -C /Users/suraj/Desktop/sati status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:04:03.061Z",
+      "lastAccessed": "2026-10-10T13:04:03.061Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:04:03.061Z"
+    },
+    "cmd-1791637509681": {
+      "key": "cmd-1791637509681",
+      "value": "{\"command\":\"rtk find /Users/suraj/Desktop/sati/backend -name \\\"*.ts\\\" -not -path \\\"*/node_modules/*\\\"; echo \\\"exit=$?\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:05:09.681Z",
+      "lastAccessed": "2026-10-10T13:05:09.681Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:05:09.681Z"
+    },
+    "cmd-1791637554006": {
+      "key": "cmd-1791637554006",
+      "value": "{\"command\":\"rtk find /Users/suraj/Desktop/sati/backend -name \\\"*.ts\\\" -not -path \\\"*/node_modules/*\\\" -print; echo \\\"exit=$?\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:05:54.006Z",
+      "lastAccessed": "2026-10-10T13:05:54.006Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:05:54.006Z"
+    },
+    "cmd-1791637589246": {
+      "key": "cmd-1791637589246",
+      "value": "{\"command\":\"rtk ls /Users/suraj/Desktop/sati/backend/api/; echo \\\"---all backend dirs---\\\"; ls -R /Users/suraj/Desktop/sati/backend | grep -v node_modules | head -50\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:06:29.246Z",
+      "lastAccessed": "2026-10-10T13:06:29.246Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:06:29.246Z"
+    },
+    "cmd-1791637626913": {
+      "key": "cmd-1791637626913",
+      "value": "{\"command\":\"ls -la /Users/suraj/Desktop/sati/backend/ | head -30; echo \\\"---api check---\\\"; test -d /Users/suraj/Desktop/sati/backend/api && echo \\\"api dir exists\\\" || echo \\\"api dir MISSING\\\"; test -f /Users/suraj/Desktop/sati/backend/api/products.ts && echo \\\"products.ts exists\\\" || echo \\\"products.ts MISSING\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:07:06.913Z",
+      "lastAccessed": "2026-10-10T13:07:06.913Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:07:06.913Z"
+    },
+    "cmd-1791637665431": {
+      "key": "cmd-1791637665431",
+      "value": "{\"command\":\"git ls-files backend/api/ 2>/dev/null; echo \\\"---status---\\\"; rtk git status --short; echo \\\"---log for api---\\\"; git log --oneline -- backend/api/products.ts | head; echo \\\"---diff stat HEAD---\\\"; git diff --stat HEAD 2>/dev/null | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:07:45.431Z",
+      "lastAccessed": "2026-10-10T13:07:45.431Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:07:45.431Z"
+    },
+    "cmd-1791637713543": {
+      "key": "cmd-1791637713543",
+      "value": "{\"command\":\"rtk git log --oneline -10; echo \\\"---HEAD---\\\"; git rev-parse HEAD; echo \\\"---is 3ef5d38 in history?---\\\"; git merge-base --is-ancestor 3ef5d38 HEAD && echo \\\"YES ancestor of HEAD\\\" || echo \\\"NO not in history\\\"; echo \\\"---file tracked now?---\\\"; git cat-file -e HEAD:backend/api/products.ts 2>&1 && echo \\\"tracked at HEAD\\\" || echo \\\"NOT tracked at HEAD\\\"; echo \\\"---log of that commit---\\\"; git show --stat 3ef5d38 2>/dev/null | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:08:33.543Z",
+      "lastAccessed": "2026-10-10T13:08:33.543Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:08:33.543Z"
+    },
+    "cmd-1791637763330": {
+      "key": "cmd-1791637763330",
+      "value": "{\"command\":\"rtk git show 3ef5d38 -- sati-admin/lib/admin-api.ts 2>/dev/null; echo \\\"---stray .ts in backend---\\\"; git ls-files backend/ | rtk grep '\\\\.ts$' || echo \\\"no tracked .ts files in backend\\\"; echo \\\"---untracked .ts---\\\"; git ls-files --others --exclude-standard backend/ | rtk grep '\\\\.ts$' || echo \\\"no untracked .ts in backend\\\"; echo \\\"---working tree clean?---\\\"; git status --short | rtk grep -v '\\\\.DS_Store' || echo \\\"clean (only DS_Store untracked)\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:09:23.330Z",
+      "lastAccessed": "2026-10-10T13:09:23.330Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:09:23.330Z"
+    },
+    "cmd-1791637836111": {
+      "key": "cmd-1791637836111",
+      "value": "{\"command\":\"git remote -v 2>/dev/null; echo \\\"---pushed?---\\\"; git log --oneline origin/main 2>/dev/null | head -3 || echo \\\"no origin/main tracking\\\"; echo \\\"---vercel configs---\\\"; rtk find /Users/suraj/Desktop/sati -maxdepth 2 \\\\( -name \\\"vercel.json\\\" -o -name \\\"vercel.config.*\\\" -o -name \\\".vercel\\\" \\\\) -not -path \\\"*/node_modules/*\\\" 2>/dev/null; echo \\\"---root package.json---\\\"; rtk read /Users/suraj/Desktop/sati/package.json 2>/dev/null || echo \\\"no root package.json\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:10:36.111Z",
+      "lastAccessed": "2026-10-10T13:10:36.111Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:10:36.111Z"
+    },
+    "cmd-1791637887332": {
+      "key": "cmd-1791637887332",
+      "value": "{\"command\":\"grep -n \\\"requestWithSessionRenewal\\\\|function request\\\\b\\\\|const request\\\\b\\\\|export.*request\\\" /Users/suraj/Desktop/sati/sati-admin/lib/admin-api.ts | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:11:27.332Z",
+      "lastAccessed": "2026-10-10T13:11:27.332Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:11:27.332Z"
+    },
+    "cmd-1791638376986": {
+      "key": "cmd-1791638376986",
+      "value": "{\"command\":\"cd /Users/suraj/Desktop/sati && rtk find . -maxdepth 2 \\\\( -name \\\"vercel.json\\\" -o -name \\\"vercel.config.*\\\" -o -name \\\".vercel.json\\\" \\\\) -not -path \\\"*/node_modules/*\\\" 2>/dev/null; echo \\\"---root files---\\\"; ls -la | rtk grep -vE \\\"^d\\\"; echo \\\"---is there a root package.json?---\\\"; test -f package.json && rtk read package.json || echo \\\"NO root package.json\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-10T13:19:36.986Z",
+      "lastAccessed": "2026-10-10T13:19:36.986Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-09T13:19:36.986Z"
     }
   },
   "version": "3.0.0"

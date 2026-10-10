@@ -4,10 +4,11 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, Lock } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, Lock, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/app/components/cart-provider"
+import { ProductChat } from "@/app/components/product-chat"
 import { productBadgeClasses } from "@/lib/product-badges"
 import { getProductGallery, type StoreProduct } from "@/lib/store-products"
 import { useWishlist } from "@/lib/wishlist-store"
@@ -33,6 +34,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
   const [selectedSize, setSelectedSize] = useState("M")
   const [isAdded, setIsAdded] = useState(false)
   const isFavorite = wishlist.productIds.includes(product.id)
+  const [chatOpen, setChatOpen] = useState(false)
 
   const gallery = getProductGallery(product)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
@@ -267,6 +269,17 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
           </div>
           <p role="status" className="sr-only">{isAdded ? `${product.name} added to cart` : ""}</p>
 
+          {/* Product Specific Chat Trigger Button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setChatOpen(true)}
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border-black/15 bg-[#f7f3eb]/70 text-xs font-semibold text-[#171512] transition hover:border-[#e94717] hover:bg-white hover:text-[#e94717]"
+          >
+            <Sparkles className="size-3.5 text-[#e94717]" />
+            Ask Sati Stylist about this piece
+          </Button>
+
           <div className="mt-7 grid gap-3 border-y border-black/10 py-4 text-[12px] text-[#706c66] sm:grid-cols-2">
             <p className="flex items-center gap-2"><Truck aria-hidden="true" className="size-4 text-[#e94717]" /> Free shipping over {formatRupees(120)}</p>
             <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-4 text-[#e94717]" /> Easy 30-day returns</p>
@@ -311,6 +324,9 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
           </div>
         </div>
       </section>
+
+      {/* Product-Specific AI & Support Chat */}
+      <ProductChat product={product} open={chatOpen} onOpenChange={setChatOpen} />
     </main>
   )
 }

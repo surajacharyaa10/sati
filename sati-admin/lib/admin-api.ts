@@ -169,6 +169,19 @@ export type Notification = {
   updatedAt?: string
 }
 
+export type Inquiry = {
+  _id: string
+  productId: string
+  productName: string
+  customerName: string
+  customerEmail: string
+  message: string
+  status: "pending" | "reviewed" | "resolved"
+  userId?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 export const adminApi = {
   products: {
     list: (query?: Record<string, string>) => {
@@ -297,5 +310,23 @@ export const adminApi = {
       topProducts,
       recentOrders,
     }
+  },
+
+  inquiries: {
+    list: (params?: { status?: string; page?: number; limit?: number }) => {
+      const qs = params ? "?" + new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+      ).toString() : ""
+      return requestWithSessionRenewal<{ inquiries: Inquiry[]; total: number; page: number; limit: number }>(`/api/chat/inquiries${qs}`)
+    },
+    updateStatus: (id: string, status: Inquiry["status"]) =>
+      requestWithSessionRenewal<Inquiry>(`/api/chat/inquiries/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { status } as unknown as BodyInit,
+      }),
+    remove: (id: string) =>
+      requestWithSessionRenewal<{ success: boolean }>(`/api/chat/inquiries/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
   },
 }

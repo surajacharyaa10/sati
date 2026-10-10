@@ -11,6 +11,7 @@ import { CustomersManagement } from "@/components/customers-management"
 import JournalManagement from "@/components/journal-mamagement"
 import { SettingsScreen } from "@/components/settings-screen"
 import { NotificationsManagement } from "@/components/notifications-management"
+import { InquiriesManagement } from "@/components/inquiries-management"
 import { adminApi, adminAuth } from "@/lib/admin-api"
 import type { Product, Order, User } from "@/lib/admin-api"
 
@@ -72,6 +73,7 @@ export default function AdminPage() {
     products:      "Products",
     orders:        "Orders",
     customers:     "Customers",
+    inquiries:     "Inquiries",
     journal:       "Journal",
     notifications: "Notifications",
     settings:      "Store Settings",
@@ -96,6 +98,7 @@ export default function AdminPage() {
             )}
             {activeTab === "orders" && <OrdersManagement orders={orders} />}
             {activeTab === "customers" && <CustomersManagement users={users} />}
+            {activeTab === "inquiries" && <InquiriesManagement />}
             {activeTab === "journal" && <JournalManagement />}
             {activeTab === "notifications" && <NotificationsManagement />}
             {activeTab === "settings" && <SettingsScreen />}

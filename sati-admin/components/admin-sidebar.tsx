@@ -12,6 +12,7 @@ import {
   Sparkles,
   FileText,
   Bell,
+  MessageSquare,
 } from "lucide-react"
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const items: NavItem[] = [
   { id: "products",      title: "Products",         icon: Package },
   { id: "orders",        title: "Orders",           icon: ShoppingBag },
   { id: "customers",     title: "Customers",        icon: Users },
+  { id: "inquiries",     title: "Inquiries",        icon: MessageSquare },
   { id: "journal",       title: "Journal",          icon: FileText },
   { id: "notifications", title: "Notifications",    icon: Bell },
   { id: "settings",      title: "Store Settings",   icon: Settings },
@@ -97,7 +99,7 @@ export function AdminSidebar({
             <p className="mt-1 text-[11px] text-zinc-400">Connected to live backend database.</p>
           </div>
           <a
-            href="http://localhost:3000"
+            href={process.env.NEXT_PUBLIC_CLIENT_URL ?? "http://localhost:3000"}
             target="_blank"
             rel="noreferrer"
             className="flex h-10 w-full items-center justify-between rounded-lg px-3 text-xs font-semibold text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
@@ -105,7 +107,7 @@ export function AdminSidebar({
             <span className="flex items-center gap-2">
               <Store className="size-3.5" /> View Storefront
             </span>
-            <span className="text-[10px] rounded bg-white/10 px-1.5 py-0.5">3000</span>
+            <span className="text-[10px] rounded bg-white/10 px-1.5 py-0.5">↗</span>
           </a>
         </div>
       </SidebarFooter>

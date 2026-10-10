@@ -12,6 +12,7 @@ import cartRoutes from './route/cart.js';
 import orderRoutes from './route/orders.js';
 import journalRoutes from './route/journal.js';
 import notificationRoutes from './route/notifications.js';
+import chatRoutes from './route/chat.js';
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
