@@ -15,10 +15,13 @@ import {
   Mail,
   Inbox,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
   Circle,
   Filter,
 } from "lucide-react"
-import { adminApi, type ChatSession, type ChatMsg } from "@/lib/admin-api"
+import { adminApi, type ChatSession, type ChatMsg, type Product } from "@/lib/admin-api"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -152,12 +155,53 @@ function ChatThread({
 }) {
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
+  const [statusChanging, setStatusChanging] = useState(false)
   const [error, setError] = useState("")
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loadingProduct, setLoadingProduct] = useState(false)
+  const [showSpecs, setShowSpecs] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [session.messages.length])
+
+  // Fetch product specifications so admin can look and answer customer queries accurately
+  useEffect(() => {
+    let active = true
+    if (!session.productId) {
+      setProduct(null)
+      return
+    }
+    setLoadingProduct(true)
+    adminApi.products
+      .get(session.productId)
+      .then((p) => {
+        if (active && p) setProduct(p)
+      })
+      .catch(async () => {
+        // Fallback: search in list by ID or name
+        try {
+          const list = await adminApi.products.list()
+          const found = list.find(
+            (p) =>
+              p.id === session.productId ||
+              (p as any)._id === session.productId ||
+              p.name.toLowerCase() === session.productName?.toLowerCase()
+          )
+          if (active && found) setProduct(found)
+        } catch {
+          // ignore
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingProduct(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [session.productId, session.productName])
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()
@@ -173,6 +217,22 @@ function ChatThread({
     } finally {
       setSending(false)
     }
+  }
+
+  async function handleToggleStatus() {
+    setStatusChanging(true)
+    try {
+      const nextStatus = session.status === "active" ? "closed" : "active"
+      await onStatusChange(session._id, nextStatus)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update chat status")
+    } finally {
+      setStatusChanging(false)
+    }
+  }
+
+  function handleInsertText(snippet: string) {
+    setInput((prev) => (prev ? `${prev} ${snippet}` : snippet))
   }
 
   return (
@@ -192,45 +252,237 @@ function ChatThread({
             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold text-white uppercase">
               {session.customerName.charAt(0)}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-white">{session.customerName}</p>
-              <p className="text-[11px] text-zinc-500 flex items-center gap-1">
-                <Package className="size-3" /> {session.productName}
-              </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{session.customerName}</p>
+              <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+                <span className="flex items-center gap-1 truncate">
+                  <Package className="size-3 text-[#e94717]" /> {session.productName}
+                </span>
+                <span className="text-zinc-700">·</span>
+                <a href={`mailto:${session.customerEmail}`} className="text-blue-400 hover:underline truncate">
+                  {session.customerEmail}
+                </a>
+              </div>
             </div>
           </div>
-          <a href={`mailto:${session.customerEmail}`} className="mt-0.5 block text-[11px] text-blue-400 hover:underline">
-            {session.customerEmail}
-          </a>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onStatusChange(session._id, session.status === "active" ? "closed" : "active")}
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
-              session.status === "active"
-                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-red-700 hover:text-red-400"
-                : "border-emerald-700/50 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40"
-            }`}
-            title={session.status === "active" ? "Close session" : "Reopen session"}
-          >
-            {session.status === "active" ? (
-              <><XCircle className="size-3" /> Close</>
-            ) : (
-              <><CheckCircle2 className="size-3" /> Reopen</>
-            )}
-          </button>
+        {/* Header action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Prominent Close / Reopen Chat Button */}
+          {session.status === "active" ? (
+            <button
+              type="button"
+              disabled={statusChanging}
+              onClick={handleToggleStatus}
+              className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500 hover:text-white transition shadow-xs disabled:opacity-50"
+              title="Finish and close this chat"
+            >
+              {statusChanging ? (
+                <RefreshCw className="size-3.5 animate-spin" />
+              ) : (
+                <XCircle className="size-3.5" />
+              )}
+              Close Chat
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-[11px] font-medium text-zinc-400">
+                Closed
+              </span>
+              <button
+                type="button"
+                disabled={statusChanging}
+                onClick={handleToggleStatus}
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500 hover:text-white transition shadow-xs disabled:opacity-50"
+                title="Reopen this chat"
+              >
+                {statusChanging ? (
+                  <RefreshCw className="size-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="size-3.5" />
+                )}
+                Reopen
+              </button>
+            </div>
+          )}
 
           <button
             type="button"
             onClick={() => onDelete(session._id)}
-            className="flex size-7 items-center justify-center rounded-lg text-zinc-500 hover:bg-red-950/40 hover:text-red-400 transition"
+            className="flex size-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-red-950/40 hover:text-red-400 transition"
             title="Delete session"
           >
-            <Trash2 className="size-3.5" />
+            <Trash2 className="size-4" />
           </button>
         </div>
+      </div>
+
+      {/* ── Product Specifications & Details Reference Bar ── */}
+      <div className="border-b border-white/10 bg-zinc-900 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Thumbnail */}
+            <div className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-zinc-800">
+              {product?.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                  <Package className="size-5" />
+                </div>
+              )}
+            </div>
+
+            {/* Product Title & Quick Specs */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-white truncate">
+                  {product?.name || session.productName}
+                </h4>
+                {product?.label && (
+                  <span className="rounded-full bg-[#e94717]/20 border border-[#e94717]/40 px-1.5 py-0.2 text-[9px] font-semibold text-[#e94717]">
+                    {product.label}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+                {product ? (
+                  <>
+                    <span className="font-semibold text-white">₹{product.price}</span>
+                    {product.originalPrice && (
+                      <del className="text-zinc-500 text-[10px]">₹{product.originalPrice}</del>
+                    )}
+                    <span className="text-zinc-600">·</span>
+                    <span>{product.audience} {product.category}</span>
+                    <span className="text-zinc-600">·</span>
+                    <span
+                      className={`inline-flex items-center gap-1 font-medium ${
+                        product.stock > 5
+                          ? "text-emerald-400"
+                          : product.stock > 0
+                          ? "text-amber-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      <Circle className="size-1.5 fill-current" />
+                      {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                    </span>
+                  </>
+                ) : loadingProduct ? (
+                  <span className="text-[10px] text-zinc-500 animate-pulse">Loading product details…</span>
+                ) : (
+                  <span className="text-[10px] text-zinc-500 font-mono">ID: {session.productId}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Details toggle button */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowSpecs((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition"
+            >
+              {showSpecs ? (
+                <>Hide Specs <ChevronUp className="size-3" /></>
+              ) : (
+                <>Product Details <ChevronDown className="size-3" /></>
+              )}
+            </button>
+
+            <a
+              href={`http://localhost:3000/product/${session.productId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10 hover:text-white transition"
+              title="Open product page on store"
+            >
+              <ExternalLink className="size-3" />
+            </a>
+          </div>
+        </div>
+
+        {/* Expanded Specs Drawer */}
+        {showSpecs && (
+          <div className="mt-3 border-t border-white/10 pt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
+            {/* Fabric & Fit */}
+            <div className="rounded-lg bg-zinc-800/60 p-2.5 border border-white/5 space-y-1">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Fabric & Fit</p>
+              <p className="text-zinc-200">
+                <span className="text-zinc-400">Material:</span> {product?.material || "Standard"}
+              </p>
+              <p className="text-zinc-200">
+                <span className="text-zinc-400">Fit:</span> {product?.fit || "Regular"}
+              </p>
+            </div>
+
+            {/* Available Sizes (Click to insert into reply) */}
+            <div className="rounded-lg bg-zinc-800/60 p-2.5 border border-white/5 space-y-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Available Sizes</p>
+                <span className="text-[9px] text-zinc-500">Click to insert</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {product?.sizes && product.sizes.length > 0 ? (
+                  product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => handleInsertText(`Size ${s}`)}
+                      className="rounded border border-white/10 bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-200 hover:border-[#e94717] hover:text-[#e94717] transition"
+                      title={`Insert "Size ${s}" into reply`}
+                    >
+                      {s}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-zinc-500 text-[11px]">No sizes configured</span>
+                )}
+              </div>
+            </div>
+
+            {/* Available Colors (Click to insert into reply) */}
+            <div className="rounded-lg bg-zinc-800/60 p-2.5 border border-white/5 space-y-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Colors</p>
+                <span className="text-[9px] text-zinc-500">Click to insert</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {product?.colors && product.colors.length > 0 ? (
+                  product.colors.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleInsertText(c)}
+                      className="rounded border border-white/10 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300 hover:border-[#e94717] hover:text-[#e94717] transition"
+                      title={`Insert "${c}" into reply`}
+                    >
+                      {c}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-zinc-500 text-[11px]">No colors configured</span>
+                )}
+              </div>
+            </div>
+
+            {/* Description & Details */}
+            {(product?.description || product?.details) && (
+              <div className="sm:col-span-2 lg:col-span-3 rounded-lg bg-zinc-800/40 p-2.5 border border-white/5">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">Description & Details</p>
+                <p className="text-zinc-300 leading-relaxed text-[11px]">
+                  {product.description || product.details}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -241,35 +493,64 @@ function ChatThread({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Input / Closed state */}
       <div className="border-t border-white/10 bg-zinc-950 p-4">
         {session.status === "closed" ? (
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-center text-xs text-zinc-500">
-            This session is closed. Reopen it to reply.
+          <div className="flex items-center justify-between rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-xs text-zinc-400">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-400" />
+              This chat is finished and closed.
+            </span>
+            <button
+              type="button"
+              disabled={statusChanging}
+              onClick={handleToggleStatus}
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 font-semibold text-emerald-400 hover:bg-emerald-500 hover:text-white transition disabled:opacity-50"
+            >
+              <RefreshCw className="size-3" />
+              Reopen Chat
+            </button>
           </div>
         ) : (
-          <form onSubmit={handleSend} className="flex items-end gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend(e)
-                }
-              }}
-              placeholder="Type a reply… (Enter to send, Shift+Enter for newline)"
-              rows={2}
-              className="flex-1 resize-none rounded-xl border border-white/10 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-[#e94717]/50 focus:ring-1 focus:ring-[#e94717]/20"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || sending}
-              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e94717] text-white transition hover:bg-[#d03e12] disabled:opacity-40"
-            >
-              {sending ? <RefreshCw className="size-4 animate-spin" /> : <Send className="size-4" />}
-            </button>
-          </form>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live conversation with {session.customerName}
+              </span>
+              <button
+                type="button"
+                disabled={statusChanging}
+                onClick={handleToggleStatus}
+                className="flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-red-400 hover:underline transition"
+              >
+                <XCircle className="size-3 text-red-400" />
+                Finish & Close Chat
+              </button>
+            </div>
+            <form onSubmit={handleSend} className="flex items-end gap-2">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSend(e)
+                  }
+                }}
+                placeholder="Type a reply… (Enter to send, Shift+Enter for newline)"
+                rows={2}
+                className="flex-1 resize-none rounded-xl border border-white/10 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-[#e94717]/50 focus:ring-1 focus:ring-[#e94717]/20"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || sending}
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e94717] text-white transition hover:bg-[#d03e12] disabled:opacity-40"
+              >
+                {sending ? <RefreshCw className="size-4 animate-spin" /> : <Send className="size-4" />}
+              </button>
+            </form>
+          </div>
         )}
         {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
         <p className="mt-1.5 text-[10px] text-zinc-600">

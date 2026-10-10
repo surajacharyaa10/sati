@@ -2,7 +2,7 @@ import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import User from '../module/user.js';
 import { avatarUpload, deleteAvatar, saveAvatar } from '../services/avatar.js';
-import { verifyPassword } from '../services/password.js';
+import { hashPassword, verifyPassword } from '../services/password.js';
 import { authenticate, endSession, isUserAdmin, startSession } from '../services/session.js';
 
 const router = express.Router();
@@ -195,6 +195,39 @@ router.patch('/profile', authenticate, parseAvatar, async (req, res) => {
 
 		console.error('Profile update failed:', error);
 		return res.status(500).json({ error: 'Unable to update your profile' });
+	}
+});
+
+router.post('/change-password', authenticate, async (req, res) => {
+	if (req.authUserId.startsWith('admin-')) {
+		return res.status(403).json({ error: 'Cannot modify hardcoded admin password from account settings' });
+	}
+
+	const { currentPassword, newPassword } = req.body ?? {};
+	if (typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 128) {
+		return res.status(400).json({ error: 'New password must be between 6 and 128 characters' });
+	}
+
+	try {
+		const user = await User.findById(req.authUserId).select('+passwordHash');
+		if (!user) {
+			return res.status(401).json({ error: 'User not found' });
+		}
+
+		if (currentPassword && user.passwordHash) {
+			const isMatch = await verifyPassword(currentPassword, user.passwordHash);
+			if (!isMatch) {
+				return res.status(400).json({ error: 'Current password is incorrect' });
+			}
+		}
+
+		user.passwordHash = await hashPassword(newPassword);
+		await user.save();
+
+		return res.json({ message: 'Password updated successfully' });
+	} catch (error) {
+		console.error('Password change failed:', error);
+		return res.status(500).json({ error: 'Failed to update password' });
 	}
 });
 

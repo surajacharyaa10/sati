@@ -74,6 +74,7 @@ interface ProductChatProps {
   onOpenChange?: (open: boolean) => void
   onSelectColor?: (color: string) => void
   onSelectSize?: (size: string) => void
+  initialTab?: "ai" | "support"
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ export function ProductChat({
   product,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  initialTab = "ai",
 }: ProductChatProps) {
   const [internalOpen, setInternalOpen] = React.useState(false)
   const isControlled = controlledOpen !== undefined
@@ -195,7 +197,14 @@ export function ProductChat({
   const { user } = useAuth()
   const { addItem } = useCart()
 
-  const [activeTab, setActiveTab] = React.useState<"ai" | "support">("ai")
+  const [activeTab, setActiveTab] = React.useState<"ai" | "support">(initialTab)
+
+  // Sync activeTab when initialTab or isOpen changes
+  React.useEffect(() => {
+    if (controlledOpen && initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [controlledOpen, initialTab])
 
   // ── AI tab state ────────────────────────────────────────────────────────────
   const [inputMessage, setInputMessage] = React.useState("")
@@ -216,8 +225,6 @@ export function ProductChat({
   const aiBottomRef = React.useRef<HTMLDivElement>(null)
 
   // ── Live chat (support) tab state ────────────────────────────────────────────
-  const [liveName, setLiveName] = React.useState(user?.name ?? "")
-  const [liveEmail, setLiveEmail] = React.useState(user?.email ?? "")
   const [liveInput, setLiveInput] = React.useState("")
   const [liveSession, setLiveSession] = React.useState<LiveSession | null>(null)
   const [liveStarting, setLiveStarting] = React.useState(false)
@@ -226,13 +233,28 @@ export function ProductChat({
   const liveBottomRef = React.useRef<HTMLDivElement>(null)
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Sync user info
-  React.useEffect(() => {
-    if (user) {
-      if (!liveName) setLiveName(user.name)
-      if (!liveEmail) setLiveEmail(user.email)
+  // Helper to get authenticated user or persistent guest credentials
+  const getCustomerInfo = React.useCallback(() => {
+    if (user?.name || user?.email) {
+      return {
+        name: user.name || "Customer",
+        email: user.email || `customer-${user.id || "user"}@sati.store`,
+        userId: user.id || null,
+      }
     }
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+    let guestId = typeof window !== "undefined" ? localStorage.getItem("sati_guest_id") : null
+    if (!guestId) {
+      guestId = Math.random().toString(36).substring(2, 8)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sati_guest_id", guestId)
+      }
+    }
+    return {
+      name: `Guest (${guestId})`,
+      email: `guest_${guestId}@sati.store`,
+      userId: null,
+    }
+  }, [user])
 
   // Restore session from localStorage on mount
   React.useEffect(() => {
@@ -389,57 +411,55 @@ export function ProductChat({
     }
   }
 
-  // ── Live chat: start session ─────────────────────────────────────────────────
-
-  async function handleStartChat(e: React.FormEvent) {
-    e.preventDefault()
-    setLiveError("")
-    if (!liveName.trim() || !liveEmail.trim() || !liveInput.trim()) {
-      setLiveError("Please fill in your name, email, and first message.")
-      return
-    }
-    setLiveStarting(true)
-    try {
-      const session = await apiRequest<LiveSession>("/api/chat/sessions", {
-        method: "POST",
-        body: {
-          productId: product.id,
-          productName: product.name,
-          customerName: liveName.trim(),
-          customerEmail: liveEmail.trim(),
-          message: liveInput.trim(),
-          userId: user?.id ?? null,
-        },
-      })
-      setLiveSession(session)
-      setLiveInput("")
-      localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(session))
-    } catch (err) {
-      setLiveError(err instanceof Error ? err.message : "Failed to start chat. Try again.")
-    } finally {
-      setLiveStarting(false)
-    }
-  }
-
-  // ── Live chat: send follow-up ────────────────────────────────────────────────
+  // ── Live chat: send first message (auto-creates session) or follow-up ────────
 
   async function handleLiveSend(e: React.FormEvent) {
     e.preventDefault()
-    if (!liveSession || !liveInput.trim() || liveSending) return
-    setLiveSending(true)
+    const text = liveInput.trim()
+    if (!text) return
+
     setLiveError("")
-    try {
-      const updated = await apiRequest<LiveSession>(
-        `/api/chat/sessions/${encodeURIComponent(liveSession._id)}/messages`,
-        { method: "POST", body: { text: liveInput.trim() } }
-      )
-      setLiveSession(updated)
-      setLiveInput("")
-      localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(updated))
-    } catch (err) {
-      setLiveError(err instanceof Error ? err.message : "Failed to send. Try again.")
-    } finally {
-      setLiveSending(false)
+    const customer = getCustomerInfo()
+
+    if (!liveSession) {
+      // First message → create session automatically
+      setLiveStarting(true)
+      try {
+        const session = await apiRequest<LiveSession>("/api/chat/sessions", {
+          method: "POST",
+          body: {
+            productId: product.id,
+            productName: product.name,
+            customerName: customer.name,
+            customerEmail: customer.email,
+            message: text,
+            userId: customer.userId,
+          },
+        })
+        setLiveSession(session)
+        setLiveInput("")
+        localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(session))
+      } catch (err) {
+        setLiveError(err instanceof Error ? err.message : "Failed to send. Try again.")
+      } finally {
+        setLiveStarting(false)
+      }
+    } else {
+      // Follow-up message
+      setLiveSending(true)
+      try {
+        const updated = await apiRequest<LiveSession>(
+          `/api/chat/sessions/${encodeURIComponent(liveSession._id)}/messages`,
+          { method: "POST", body: { text } }
+        )
+        setLiveSession(updated)
+        setLiveInput("")
+        localStorage.setItem(SESSION_KEY(product.id), JSON.stringify(updated))
+      } catch (err) {
+        setLiveError(err instanceof Error ? err.message : "Failed to send. Try again.")
+      } finally {
+        setLiveSending(false)
+      }
     }
   }
 
@@ -562,9 +582,9 @@ export function ProductChat({
                     : "text-[#706c66] hover:text-[#171512]"
                 }`}
               >
-                <MessageSquare className="size-3.5" />
-                Live Chat
-                {(hasNewAdminReply || (liveSession && !activeTab)) && (
+                <MessageSquare className="size-3.5 text-[#e94717]" />
+                Store Support
+                {(hasNewAdminReply || (liveSession && activeTab !== "support")) && (
                   <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[#e94717]" />
                 )}
               </button>
@@ -713,232 +733,174 @@ export function ProductChat({
             </div>
           )}
 
-          {/* ── TAB 2: Live Chat with Admin ── */}
+          {/* ── TAB 2: Store Support (Live Chat with Team) ── */}
           {activeTab === "support" && (
             <div className="flex flex-1 flex-col overflow-hidden">
-              {!liveSession ? (
-                /* ── Start a new session ── */
-                <div className="flex-1 overflow-y-auto p-5">
-                  {/* Info banner */}
-                  <div className="mb-4 rounded-xl border border-black/10 bg-white p-4 shadow-xs">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-[#171512]">
-                      <MessageSquare className="size-4 text-[#e94717]" />
-                      Live Chat with Our Team
-                    </div>
-                    <p className="mt-1 text-xs text-[#706c66] leading-relaxed">
-                      Chat directly with the SATI team about <strong>{product.name}</strong> — sizing, custom orders, bulk enquiries, or anything the AI couldn&apos;t answer.
-                    </p>
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600">
-                      <Circle className="size-2 fill-current" />
-                      Team typically replies within a few hours
+              {/* Thread header */}
+              <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-[#f7f3eb] px-4 py-2">
+                <div className="flex items-center gap-2 text-[11px]">
+                  {liveSession ? (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${
+                        liveSession.status === "active"
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          : "border-zinc-300 bg-zinc-100 text-zinc-500"
+                      }`}
+                    >
+                      <Circle
+                        className={`size-1.5 fill-current ${
+                          liveSession.status === "active" ? "text-emerald-500" : "text-zinc-400"
+                        }`}
+                      />
+                      {liveSession.status === "active" ? "Live · SATI Team Connected" : "Session Closed"}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[#706c66]">
+                      <Circle className="size-1.5 fill-current text-emerald-500" />
+                      Live Chat with SATI Team
+                    </span>
+                  )}
+                </div>
+                {liveSession && (
+                  <button
+                    type="button"
+                    onClick={handleEndSession}
+                    className="flex items-center gap-1 rounded-lg border border-black/10 px-2.5 py-1 text-[11px] text-[#706c66] hover:border-red-300 hover:text-red-500 transition"
+                  >
+                    <XCircle className="size-3" />
+                    New Chat
+                  </button>
+                )}
+              </div>
+
+              {/* Messages area */}
+              <div className="flex-1 overflow-y-auto space-y-3 p-4">
+                {/* Friendly welcome bubble when starting fresh */}
+                {!liveSession && (
+                  <div className="space-y-3">
+                    <div className="flex justify-start">
+                      <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
+                        S
+                      </div>
+                      <div className="max-w-[85%] rounded-2xl rounded-tl-xs border border-black/10 bg-white px-3.5 py-3 text-xs leading-relaxed text-[#171512] shadow-xs">
+                        <p className="mb-1 text-[10px] font-bold text-[#e94717]">SATI Store Support</p>
+                        <p>
+                          Hi there! Welcome to SATI Store Support for <strong>{product.name}</strong>.
+                        </p>
+                        <p className="mt-1.5 text-[#706c66]">
+                          Ask about custom sizing, tailoring, orders, or any piece inquiries. Send a message below and our team will chat with you directly.
+                        </p>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <form onSubmit={handleStartChat} className="space-y-3.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#171512]">Your Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={liveName}
-                        onChange={(e) => setLiveName(e.target.value)}
-                        placeholder="e.g. Maya Sharma"
-                        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                      />
+                {/* Chat message bubbles */}
+                {liveSession?.messages.map((msg) => {
+                  const isCustomer = msg.sender === "customer"
+                  return (
+                    <div key={msg._id} className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
+                      {!isCustomer && (
+                        <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
+                          S
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                          isCustomer
+                            ? "rounded-tr-xs bg-[#171512] text-white"
+                            : "rounded-tl-xs border border-black/10 bg-white text-[#171512] shadow-xs"
+                        }`}
+                      >
+                        {!isCustomer && (
+                          <p className="mb-1 text-[10px] font-bold text-[#e94717]">SATI Team</p>
+                        )}
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                        <p className={`mt-1 text-right text-[10px] ${isCustomer ? "text-white/50" : "text-[#8b867e]"}`}>
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-[#171512]">Your Email</label>
-                      <input
-                        type="email"
-                        required
-                        value={liveEmail}
-                        onChange={(e) => setLiveEmail(e.target.value)}
-                        placeholder="e.g. you@example.com"
-                        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-[#171512]">
-                        Your first message
-                      </label>
-                      <textarea
-                        required
-                        rows={3}
-                        value={liveInput}
-                        onChange={(e) => setLiveInput(e.target.value)}
-                        placeholder={`What would you like to know about ${product.name}?`}
-                        className="mt-1.5 w-full rounded-lg border border-black/15 bg-white p-3 text-xs text-[#171512] outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                      />
-                    </div>
+                  )
+                })}
 
-                    {liveError && (
-                      <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-center text-xs text-red-600">
-                        {liveError}
-                      </p>
-                    )}
+                {/* Waiting for admin indicator */}
+                {liveSession?.status === "active" && liveSession.messages.at(-1)?.sender === "customer" && (
+                  <div className="flex justify-start">
+                    <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
+                      S
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-black/10 bg-white px-3.5 py-3 text-xs text-[#8b867e] shadow-xs">
+                      <span className="size-1.5 animate-bounce rounded-full bg-[#e94717]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-[#e94717] [animation-delay:0.15s]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-[#e94717] [animation-delay:0.3s]" />
+                      <span className="ml-1 text-[11px] text-[#706c66]">Sent to team…</span>
+                    </div>
+                  </div>
+                )}
 
+                {/* Session closed */}
+                {liveSession?.status === "closed" && (
+                  <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-[#f7f3eb] p-3 text-xs text-[#706c66]">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    This session has been closed. Click below to start a new chat.
+                  </div>
+                )}
+
+                <div ref={liveBottomRef} />
+              </div>
+
+              {/* Chat Input Bar */}
+              <div className="border-t border-black/10 bg-white px-3.5 pb-3.5 pt-3">
+                {liveSession?.status !== "closed" ? (
+                  <form
+                    onSubmit={handleLiveSend}
+                    className="flex items-center gap-2 rounded-full border border-black/15 bg-[#f7f3eb] px-3.5 py-1.5 focus-within:border-[#e94717] focus-within:ring-2 focus-within:ring-[#e94717]/20"
+                  >
+                    <input
+                      type="text"
+                      value={liveInput}
+                      onChange={(e) => setLiveInput(e.target.value)}
+                      placeholder={liveSession ? "Reply to SATI team…" : `Ask SATI team about ${product.name}…`}
+                      className="flex-1 bg-transparent text-xs text-[#171512] outline-none placeholder:text-[#8b867e]"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleLiveSend(e)
+                        }
+                      }}
+                    />
                     <Button
                       type="submit"
-                      disabled={liveStarting}
-                      className="h-11 w-full rounded-full bg-[#e94717] text-xs font-semibold text-white hover:bg-[#d03e12] disabled:opacity-50"
+                      disabled={!liveInput.trim() || liveStarting || liveSending}
+                      size="icon-sm"
+                      className="size-7 rounded-full bg-[#171512] text-white hover:bg-[#e94717] disabled:opacity-30"
+                      aria-label="Send"
                     >
-                      {liveStarting ? (
-                        <span className="flex items-center gap-2">
-                          <RefreshCw className="size-3.5 animate-spin" />
-                          Starting chat…
-                        </span>
+                      {liveStarting || liveSending ? (
+                        <RefreshCw className="size-3 animate-spin" />
                       ) : (
-                        <span className="flex items-center gap-2">
-                          <MessageSquare className="size-3.5" />
-                          Start Live Chat
-                        </span>
+                        <Send className="size-3" />
                       )}
                     </Button>
                   </form>
-                </div>
-              ) : (
-                /* ── Active chat thread ── */
-                <>
-                  {/* Thread header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-[#f7f3eb] px-4 py-2.5">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${
-                          liveSession.status === "active"
-                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                            : "border-zinc-300 bg-zinc-100 text-zinc-500"
-                        }`}
-                      >
-                        <Circle
-                          className={`size-1.5 fill-current ${
-                            liveSession.status === "active" ? "text-emerald-500" : "text-zinc-400"
-                          }`}
-                        />
-                        {liveSession.status === "active" ? "Live — Admin can see this" : "Closed"}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleEndSession}
-                      className="flex items-center gap-1 rounded-lg border border-black/10 px-2.5 py-1 text-[11px] text-[#706c66] hover:border-red-300 hover:text-red-500 transition"
-                    >
-                      <XCircle className="size-3" />
-                      End & Clear
-                    </button>
-                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleEndSession}
+                    className="h-10 w-full rounded-full bg-[#171512] text-xs font-semibold text-white hover:bg-[#e94717]"
+                  >
+                    Start New Chat
+                  </Button>
+                )}
 
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 p-4">
-                    {liveSession.messages.map((msg) => {
-                      const isCustomer = msg.sender === "customer"
-                      return (
-                        <div key={msg._id} className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
-                          {!isCustomer && (
-                            <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
-                              S
-                            </div>
-                          )}
-                          <div
-                            className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
-                              isCustomer
-                                ? "rounded-tr-xs bg-[#171512] text-white"
-                                : "rounded-tl-xs border border-black/10 bg-white text-[#171512] shadow-xs"
-                            }`}
-                          >
-                            {!isCustomer && (
-                              <p className="mb-1 text-[10px] font-bold text-[#e94717]">SATI Team</p>
-                            )}
-                            <p className="whitespace-pre-wrap">{msg.text}</p>
-                            <p
-                              className={`mt-1 text-right text-[10px] ${
-                                isCustomer ? "text-white/50" : "text-[#8b867e]"
-                              }`}
-                            >
-                              {formatTime(msg.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                    {/* Waiting indicator */}
-                    {liveSession.status === "active" &&
-                      liveSession.messages.at(-1)?.sender === "customer" && (
-                        <div className="flex justify-start">
-                          <div className="mr-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e94717] text-[11px] font-bold text-white self-end">
-                            S
-                          </div>
-                          <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-black/10 bg-white px-3.5 py-3 text-xs text-[#8b867e] shadow-xs">
-                            <RefreshCw className="size-3 animate-spin text-[#e94717]" />
-                            Waiting for admin reply…
-                          </div>
-                        </div>
-                      )}
-
-                    {liveSession.status === "closed" && (
-                      <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-[#f7f3eb] p-3 text-xs text-[#706c66]">
-                        <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-                        This chat has been closed by the admin. Start a new chat if you have more questions.
-                      </div>
-                    )}
-
-                    <div ref={liveBottomRef} />
-                  </div>
-
-                  {/* Input */}
-                  {liveSession.status === "active" ? (
-                    <div className="border-t border-black/10 bg-white p-3.5">
-                      <form
-                        onSubmit={handleLiveSend}
-                        className="flex items-center gap-2 rounded-full border border-black/15 bg-[#f7f3eb] px-3.5 py-1.5 focus-within:border-[#e94717] focus-within:ring-2 focus-within:ring-[#e94717]/20"
-                      >
-                        <input
-                          type="text"
-                          value={liveInput}
-                          onChange={(e) => setLiveInput(e.target.value)}
-                          placeholder="Type a message to the SATI team…"
-                          className="flex-1 bg-transparent text-xs text-[#171512] outline-none placeholder:text-[#8b867e]"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault()
-                              handleLiveSend(e)
-                            }
-                          }}
-                        />
-                        <Button
-                          type="submit"
-                          disabled={!liveInput.trim() || liveSending}
-                          size="icon-sm"
-                          className="size-7 rounded-full bg-[#171512] text-white hover:bg-[#e94717] disabled:opacity-30"
-                          aria-label="Send message"
-                        >
-                          {liveSending ? (
-                            <RefreshCw className="size-3 animate-spin" />
-                          ) : (
-                            <Send className="size-3" />
-                          )}
-                        </Button>
-                      </form>
-                      {liveError && (
-                        <p className="mt-1 text-center text-[10px] text-red-500">{liveError}</p>
-                      )}
-                      <p className="mt-1.5 text-center text-[10px] text-[#8b867e]">
-                        Messages are delivered live to the SATI admin dashboard
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="border-t border-black/10 bg-white p-4">
-                      <Button
-                        type="button"
-                        onClick={handleEndSession}
-                        className="h-10 w-full rounded-full bg-[#171512] text-xs font-semibold text-white hover:bg-[#e94717]"
-                      >
-                        Start a New Chat
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
+                {liveError && (
+                  <p className="mt-1.5 text-center text-[10px] text-red-500">{liveError}</p>
+                )}
+                <p className="mt-1.5 text-center text-[10px] text-[#8b867e]">
+                  {liveSession ? "Connected live to SATI admin" : "Direct back-and-forth chat with the SATI store team"}
+                </p>
+              </div>
             </div>
           )}
         </SheetContent>

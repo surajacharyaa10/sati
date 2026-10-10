@@ -24,7 +24,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { adminAuth } from "@/lib/admin-api"
+import { adminAuth, adminApi } from "@/lib/admin-api"
 
 type NavItem = {
   id: string
@@ -46,10 +46,36 @@ const items: NavItem[] = [
 export function AdminSidebar({
   activeTab,
   setActiveTab,
+  activeChatCount: externalCount,
 }: {
   activeTab: string
   setActiveTab: (tab: string) => void
+  activeChatCount?: number
 }) {
+  const [internalCount, setInternalCount] = React.useState<number>(0)
+  const activeChatCount = externalCount !== undefined ? externalCount : internalCount
+
+  React.useEffect(() => {
+    let cancelled = false
+    async function loadActiveCount() {
+      try {
+        const active = await adminApi.chatSessions.list("active")
+        if (!cancelled) {
+          setInternalCount(active.length)
+        }
+      } catch {
+        // Silently ignore background poll errors
+      }
+    }
+
+    loadActiveCount()
+    const timer = setInterval(loadActiveCount, 4000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [])
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
       <SidebarHeader className="h-16 px-6 flex items-center border-b border-sidebar-border">
@@ -69,6 +95,9 @@ export function AdminSidebar({
           {items.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
+            const isChat = item.id === "liveChat"
+            const showChatBadge = isChat && activeChatCount > 0
+
             return (
               <SidebarMenuItem key={item.id}>
                 <SidebarMenuButton
@@ -80,8 +109,28 @@ export function AdminSidebar({
                       : "text-zinc-400 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  <span className="truncate">{item.title}</span>
+                  <div className="relative flex shrink-0 items-center justify-center">
+                    <Icon className="size-4" />
+                    {showChatBadge && (
+                      <span className="absolute -top-1 -right-1.5 flex size-2 group-data-[collapsible=icon]:block hidden">
+                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#e94717] opacity-75" />
+                        <span className="relative inline-flex size-2 rounded-full bg-[#e94717]" />
+                      </span>
+                    )}
+                  </div>
+                  <span className="truncate flex-1 text-left">{item.title}</span>
+
+                  {showChatBadge && (
+                    <span
+                      className={`ml-auto flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold group-data-[collapsible=icon]:hidden transition-all ${
+                        isActive
+                          ? "bg-white text-[#e94717] shadow-xs"
+                          : "bg-[#e94717] text-white shadow-[0_0_10px_rgba(233,71,23,0.5)] animate-pulse"
+                      }`}
+                    >
+                      {activeChatCount}
+                    </span>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )

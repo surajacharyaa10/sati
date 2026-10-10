@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { usersApi } from "@/lib/api"
+import { Eye, EyeOff } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -15,6 +16,7 @@ import {
 
 export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
@@ -96,17 +98,27 @@ export default function SignupPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#706c66]" htmlFor="password">
                   Password
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  minLength={8}
-                  maxLength={128}
-                  autoComplete="new-password"
-                  className="mt-1.5 h-11 w-full rounded-lg border border-black/15 bg-transparent px-3.5 text-sm outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
-                  placeholder="••••••••"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    className="h-11 w-full rounded-lg border border-black/15 bg-transparent pl-3.5 pr-10 text-sm outline-none focus:border-[#e94717] focus:ring-1 focus:ring-[#e94717]"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-[#171512] transition"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
 
               <Button type="submit" disabled={isSubmitting} className="h-11 w-full rounded-lg bg-[#171512] font-semibold text-white hover:bg-[#383838]">

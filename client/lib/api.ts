@@ -63,6 +63,8 @@ export const authApi = {
 
     return apiRequest<{ user: AuthUser }>("/api/auth/profile", { method: "PATCH", body })
   },
+  changePassword: (data: { currentPassword?: string; newPassword: string }) =>
+    apiRequest<{ message: string }>("/api/auth/change-password", { method: "POST", body: data }),
 }
 
 export const wishlistApi = {
@@ -117,4 +119,43 @@ export const usersApi = {
     apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, { method: "PATCH", body: changes }),
   remove: (id: string) =>
     apiRequest<{ message: string }>(`/api/users/${encodeURIComponent(id)}`, { method: "DELETE" }),
+}
+
+export type ProductReview = {
+  _id: string
+  productId: string
+  userName: string
+  userEmail?: string
+  rating: number
+  title?: string
+  comment: string
+  verifiedPurchase: boolean
+  createdAt: string
+}
+
+export type ReviewStats = {
+  rating: number
+  reviewCount: number
+  distribution: Record<number, number>
+}
+
+export const reviewsApi = {
+  getReviews: (productId: string) =>
+    apiRequest<{ reviews: ProductReview[]; stats: ReviewStats }>(
+      `/api/products/${encodeURIComponent(productId)}/reviews`
+    ),
+  createReview: (
+    productId: string,
+    data: {
+      userName: string
+      userEmail?: string
+      rating: number
+      title?: string
+      comment: string
+    }
+  ) =>
+    apiRequest<{ success: boolean; review: ProductReview; stats: ReviewStats }>(
+      `/api/products/${encodeURIComponent(productId)}/reviews`,
+      { method: "POST", body: data }
+    ),
 }
