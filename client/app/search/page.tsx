@@ -99,11 +99,12 @@ function SearchResultsContent() {
             <div className="flex flex-1 items-center gap-2.5 px-3">
               <Search className="size-4 shrink-0 text-[#8b867e]" />
               <input
-                type="search"
+                type="text"
+                inputMode="search"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder="Search products by name, category, color, material…"
-                className="w-full bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e]"
+                className="w-full bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e] [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:hidden"
               />
               {inputVal && (
                 <button

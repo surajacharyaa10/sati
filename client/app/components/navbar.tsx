@@ -112,7 +112,7 @@ export function Navbar() {
       </div>
 
       {/* Main navbar */}
-      <div className="border-b border-black/10 bg-[#f7f3eb]">
+      <div className="relative border-b border-black/10 bg-[#f7f3eb]">
         <div className="mx-auto flex h-20 max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:px-14">
           {/* Logo */}
           <Link href="/" aria-label="Sati home" className="shrink-0">
@@ -149,7 +149,7 @@ export function Navbar() {
           {/* Navbar actions */}
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Search */}
-            <div className="relative" ref={searchContainerRef}>
+            <div className="sm:relative" ref={searchContainerRef}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -172,41 +172,53 @@ export function Navbar() {
               </Button>
 
               {searchOpen && (
-                <div className="absolute right-0 top-full z-50 mt-3 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-black/10 bg-[#f7f3eb] shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-                  {/* Search Input Bar */}
-                  <form
-                    role="search"
-                    onSubmit={handleSearchSubmit}
-                    className="flex items-center gap-2 border-b border-black/10 bg-white px-3.5 py-2.5"
-                  >
-                    <Search className="size-4 shrink-0 text-[#8b867e]" />
-                    <input
-                      ref={searchInputRef}
-                      type="search"
-                      placeholder="Search dresses, tops, men, silk…"
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      className="h-9 w-full bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e]"
-                      autoFocus
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery("")}
-                        className="rounded-full p-1 text-[#8b867e] hover:bg-black/5 hover:text-[#171512]"
-                        aria-label="Clear search"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={!trimmedQuery}
-                      className="shrink-0 rounded-full bg-[#171512] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#e94717] disabled:opacity-40"
+                <>
+                  {/* Backdrop for mobile */}
+                  <div
+                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs sm:hidden"
+                    onClick={() => setSearchOpen(false)}
+                    aria-hidden="true"
+                  />
+
+                  <div className="absolute left-3 right-3 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f3eb] shadow-2xl animate-in fade-in zoom-in-95 duration-150 sm:left-auto sm:right-0 sm:mt-3 sm:w-[26rem]">
+                    {/* Search Input Bar */}
+                    <form
+                      role="search"
+                      onSubmit={handleSearchSubmit}
+                      className="flex items-center gap-2 border-b border-black/10 bg-white px-3.5 py-2.5"
                     >
-                      Search
-                    </button>
-                  </form>
+                      <Search className="size-4 shrink-0 text-[#8b867e]" />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        inputMode="search"
+                        placeholder="Search dresses, tops, men, silk…"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        className="h-9 min-w-0 flex-1 bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e] [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:hidden"
+                        autoFocus
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("")
+                            searchInputRef.current?.focus()
+                          }}
+                          className="shrink-0 rounded-full p-1 text-[#8b867e] hover:bg-black/5 hover:text-[#171512]"
+                          aria-label="Clear search"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={!trimmedQuery}
+                        className="shrink-0 rounded-full bg-[#171512] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#e94717] disabled:opacity-40"
+                      >
+                        Search
+                      </button>
+                    </form>
 
                   {/* Search Dropdown Body */}
                   <div className="max-h-[min(24rem,65vh)] overflow-y-auto p-3">
@@ -293,7 +305,8 @@ export function Navbar() {
                     )}
                   </div>
                 </div>
-              )}
+              </>
+            )}
             </div>
 
             {/* Profile dropdown */}
@@ -435,11 +448,12 @@ export function Navbar() {
               >
                 <Search className="size-4 shrink-0 text-[#8b867e]" />
                 <input
-                  type="search"
+                  type="text"
+                  inputMode="search"
                   placeholder="Search the collection…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e]"
+                  className="w-full bg-transparent text-sm text-[#171512] outline-none placeholder:text-[#8b867e] [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:hidden"
                 />
                 <button
                   type="submit"
