@@ -13,6 +13,8 @@ import orderRoutes from './route/orders.js';
 import journalRoutes from './route/journal.js';
 import notificationRoutes from './route/notifications.js';
 import chatRoutes from './route/chat.js';
+import stripeRoutes from './route/stripe.js';
+import esewaRoutes from './route/esewa.js';
 
 dotenv.config();
 
@@ -56,6 +58,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/esewa', esewaRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

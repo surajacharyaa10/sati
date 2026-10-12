@@ -6,8 +6,6 @@ export { ORDER_STATUSES };
 
 const roundMoney = (value) => Math.round(value * 100) / 100;
 
-// Creates an order from a user's server-side cart: product snapshots and prices
-// are taken from the database, so client-supplied amounts are never trusted.
 export async function createOrderFromCart(userId) {
   const cart = await getCart(userId);
   if (cart.length === 0) return null;
@@ -46,8 +44,6 @@ export async function createOrderFromCart(userId) {
 }
 
 export async function getOrdersByUser(userId) {
-  // Admin sessions use a non-ObjectId id ("admin-<timestamp>"), which would
-  // throw a CastError in Order.find. Admins have no order history.
   if (typeof userId === "string" && userId.startsWith("admin-")) {
     return [];
   }
