@@ -57,8 +57,7 @@ const orderItemSchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema(
   {
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.Mixed,
       required: true,
       index: true,
     },
@@ -79,6 +78,16 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    address: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    phoneNumber: {
+      type: String,
+      default: '',
+      trim: true,
     },
     status: {
       type: String,

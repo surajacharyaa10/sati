@@ -6,17 +6,18 @@ export { ORDER_STATUSES };
 
 const roundMoney = (value) => Math.round(value * 100) / 100;
 
-export async function createOrderFromCart(userId) {
+export async function createOrderFromCart(userId, address, phoneNumber) {
   const cart = await getCart(userId);
   if (cart.length === 0) return null;
 
   const items = [];
   for (const line of cart) {
-    const product = await Product.findOne({ _id: line.id, active: true });
+    const baseProductId = String(line.id ?? "").split("|")[0];
+    const product = await Product.findOne({ _id: baseProductId, active: true });
     if (!product) continue;
 
     items.push({
-      productId: line.id,
+      productId: product._id,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? undefined,
@@ -38,18 +39,25 @@ export async function createOrderFromCart(userId) {
     ),
   );
 
-  const order = await Order.create({ user: userId, items, subtotal, totalSavings });
+  const order = await Order.create({
+    user: userId,
+    items,
+    subtotal,
+    totalSavings,
+    address,
+    phoneNumber,
+  });
   await clearCart(userId);
   return order;
 }
 
 export async function getOrdersByUser(userId) {
-  if (typeof userId === "string" && userId.startsWith("admin-")) {
-    return [];
-  }
   return Order.find({ user: userId }).sort({ createdAt: -1 });
 }
 
 export async function getOrderById(userId, orderId) {
+  if (typeof userId === "string" && userId.startsWith("admin-")) {
+    return Order.findById(orderId);
+  }
   return Order.findOne({ _id: orderId, user: userId });
 }

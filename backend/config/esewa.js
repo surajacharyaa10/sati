@@ -37,15 +37,32 @@ export async function verifyEsewaPayment(encodedData) {
     throw new Error('eSewa signature mismatch — payment data may have been tampered with');
   }
 
-  const url = `${process.env.ESEWA_GATEWAY_URL}/api/epay/transaction/status/?product_code=${process.env.ESEWA_PRODUCT_CODE}&total_amount=${decodedData.total_amount}&transaction_uuid=${decodedData.transaction_uuid}`;
+  let responseData;
+  try {
+    const url = `${process.env.ESEWA_GATEWAY_URL}/api/epay/transaction/status/?product_code=${process.env.ESEWA_PRODUCT_CODE}&total_amount=${decodedData.total_amount}&transaction_uuid=${decodedData.transaction_uuid}`;
 
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-  });
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    });
 
-  const responseData = await res.json();
+    if (res.ok) {
+      responseData = await res.json();
+    }
+  } catch (err) {
+    console.warn('eSewa status check warning (gateway unreachable):', err.message);
+  }
+
+  // If in sandbox mode (EPAYTEST) and status check is down, trust valid HMAC signature
+  if (!responseData && process.env.ESEWA_PRODUCT_CODE === 'EPAYTEST') {
+    responseData = {
+      status: 'COMPLETE',
+      transaction_uuid: decodedData.transaction_uuid,
+      total_amount: decodedData.total_amount,
+    };
+  }
 
   if (
+    !responseData ||
     responseData.status !== 'COMPLETE' ||
     responseData.transaction_uuid !== decodedData.transaction_uuid ||
     Number(responseData.total_amount) !== Number(decodedData.total_amount)

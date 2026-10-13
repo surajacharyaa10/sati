@@ -43,12 +43,29 @@ export type OrderItem = {
   quantity: number
 }
 
+export type PaymentInfo = {
+  _id?: string
+  paymentGateway: "esewa" | "stripe" | "khalti" | "connectIps" | string
+  transactionId?: string
+  pidx?: string
+  status: "success" | "pending" | "failed" | string
+  amount?: number
+  paymentDate?: string
+  createdAt?: string
+}
+
 export type Order = {
   id: string
   items: OrderItem[]
   subtotal: number
   totalSavings: number
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
+  user?: { _id: string; name: string; email: string } | string
+  customerName?: string
+  customerEmail?: string
+  payment?: PaymentInfo | null
+  address?: string
+  phoneNumber?: string
   createdAt: string
   updatedAt: string
 }
@@ -234,9 +251,14 @@ export const adminApi = {
       }),
   },
   orders: {
-    list: () => requestWithSessionRenewal<Order[]>("/api/orders/me"),
+    list: () => requestWithSessionRenewal<Order[]>("/api/orders/all"),
     get: (id: string) =>
       requestWithSessionRenewal<Order>(`/api/orders/me/${encodeURIComponent(id)}`),
+    updateStatus: (id: string, status: Order["status"]) =>
+      requestWithSessionRenewal<Order>(`/api/orders/${encodeURIComponent(id)}/status`, {
+        method: "PATCH",
+        body: { status } as unknown as BodyInit,
+      }),
   },
   users: {
     list: () =>

@@ -23,12 +23,12 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const responseBody: unknown = await response.json().catch(() => null)
 
   if (!response.ok) {
+    const errorObj = typeof responseBody === "object" && responseBody !== null ? (responseBody as Record<string, unknown>) : null
     const message =
-      typeof responseBody === "object" &&
-      responseBody !== null &&
-      "error" in responseBody &&
-      typeof responseBody.error === "string"
-        ? responseBody.error
+      typeof errorObj?.error === "string"
+        ? errorObj.error
+        : typeof errorObj?.message === "string"
+        ? errorObj.message
         : `Request failed with status ${response.status}`
 
     throw new Error(message)
@@ -158,4 +158,128 @@ export const reviewsApi = {
       `/api/products/${encodeURIComponent(productId)}/reviews`,
       { method: "POST", body: data }
     ),
+}
+
+// ─── Payment APIs ────────────────────────────────────────────────────────────
+
+export type EsewaConfig = {
+  form_url?: string
+  amount: number
+  transaction_uuid: string
+  product_code: string
+  product_service_charge: number
+  product_delivery_charge: number
+  tax_amount: number
+  total_amount: number
+  success_url: string
+  failure_url: string
+  signed_field_names: string
+  signature: string
+}
+
+export type EsewaInitResponse = {
+  success: boolean
+  payment: { signature: string; signed_field_names: string }
+  order: { id: string; subtotal: number; status: string }
+  esewaConfig: EsewaConfig
+}
+
+export const paymentApi = {
+  // Stripe — create checkout session from cart items array or direct item
+  stripeCheckout: (
+    products: { name: string; image: string; price: number; quantity: number }[],
+    directItem?: { productId: string; quantity?: number; size?: string; color?: string },
+    address?: string,
+    phoneNumber?: string
+  ) =>
+    apiRequest<{ id: string; url: string }>("/api/stripe/create-checkout-session", {
+      method: "POST",
+      body: { products, directItem, address, phoneNumber },
+    }),
+
+  // eSewa — initialize payment for a single product (Buy Now)
+  esewaInitItem: (data: {
+    productId: string
+    totalPrice?: number
+    quantity?: number
+    size?: string
+    color?: string
+    address?: string
+    phoneNumber?: string
+  }) =>
+    apiRequest<EsewaInitResponse>("/api/esewa/initialize-item", {
+      method: "POST",
+      body: data,
+    }),
+
+  // eSewa — initialize payment from full cart
+  esewaInitCart: (address?: string, phoneNumber?: string) =>
+    apiRequest<EsewaInitResponse>("/api/esewa/initialize", {
+      method: "POST",
+      body: { address, phoneNumber },
+    }),
+
+  // Stripe — verify session status
+  verifyStripeSession: (sessionId: string) =>
+    apiRequest<{
+      success: boolean
+      paid: boolean
+      session: {
+        id: string
+        payment_intent?: string
+        payment_status: string
+        amount_total: number
+        currency: string
+        customer_email?: string
+        customer_name?: string
+      }
+      order?: Order | null
+    }>(`/api/stripe/verify-session/${encodeURIComponent(sessionId)}`),
+}
+
+// ─── Orders API ─────────────────────────────────────────────────────────────
+
+export type OrderItem = {
+  productId: string
+  name: string
+  price: number
+  originalPrice?: number
+  image?: string
+  alt?: string
+  size?: string
+  color?: string
+  quantity: number
+}
+
+export type PaymentRecord = {
+  _id: string
+  transactionId?: string
+  pidx?: string
+  orderId: string
+  amount: number
+  paymentGateway: "esewa" | "stripe" | "khalti" | "connectIps"
+  status: "success" | "pending" | "failed"
+  createdAt?: string
+  paymentDate?: string
+}
+
+export type Order = {
+  id: string
+  _id?: string
+  user: string
+  items: OrderItem[]
+  subtotal: number
+  totalSavings: number
+  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
+  address?: string
+  phoneNumber?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type OrderWithPayment = Order & { payment?: PaymentRecord | null }
+
+export const ordersApi = {
+  list: () => apiRequest<Order[]>("/api/orders/me"),
+  get: (orderId: string) => apiRequest<OrderWithPayment>(`/api/orders/me/${encodeURIComponent(orderId)}`),
 }

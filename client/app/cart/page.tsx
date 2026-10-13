@@ -169,11 +169,15 @@ export default function CartPage() {
                     <span>Estimated total</span>
                     <span>{formatRupees(subtotal)}</span>
                   </div>
-                  <Button type="button" disabled className="h-11 w-full rounded-full bg-[#171512] text-xs font-semibold text-white">
-                    Checkout unavailable
+                  <Button
+                    type="button"
+                    onClick={() => router.push("/checkout")}
+                    className="h-11 w-full rounded-full bg-[#171512] text-xs font-semibold text-white transition-colors hover:bg-[#e94717]"
+                  >
+                    Proceed to checkout <ArrowRight aria-hidden="true" className="ml-1 size-3.5" />
                   </Button>
                   <p className="text-center text-[12px] leading-4 text-[#817c75]">
-                    Online checkout will be available once payments are connected.
+                    Secure payments powered by Stripe & eSewa.
                   </p>
                   <Link href="/arrival-new" className="inline-flex w-full items-center justify-center gap-2 pt-2 text-xs font-semibold hover:text-[#e94717]">
                     Continue shopping <ArrowRight aria-hidden="true" className="size-3.5" />

@@ -55,11 +55,23 @@ export const authenticate = (req, res, next) => {
   }
 };
 
+export const optionalAuth = (req, res, next) => {
+  const token = req.cookies?.[cookieName];
+  if (!token) return next();
+
+  try {
+    const payload = jwt.verify(token, getSigningSecret(), { issuer: 'sati-backend' });
+    if (typeof payload !== 'string' && payload.sub) {
+      req.authUserId = payload.sub;
+    }
+  } catch {}
+
+  return next();
+};
+
 export const isUserAdmin = async (authUserId) => {
   if (!authUserId) return false;
-  if (typeof authUserId === 'string' && authUserId.startsWith('admin-')) {
-    return true;
-  }
+  // Only consider admin if the user exists in DB with admin role or matches env admin credentials
   if (!mongoose.isValidObjectId(authUserId)) {
     return false;
   }

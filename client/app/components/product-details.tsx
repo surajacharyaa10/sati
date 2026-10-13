@@ -242,8 +242,14 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
       router.push("/login")
       return
     }
-    addSelectedVariant()
-    router.push("/cart")
+    const params = new URLSearchParams({
+      buyNow: "true",
+      productId: product.id,
+      size: selectedSize || "",
+      color: selectedColor || "",
+      quantity: "1",
+    })
+    router.push(`/checkout?${params.toString()}`)
   }
 
   return (
