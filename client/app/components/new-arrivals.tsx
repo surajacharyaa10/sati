@@ -13,6 +13,7 @@ import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
+import { useCurrency } from "@/lib/currency-context"
 import {
   Card,
   CardContent,
@@ -29,6 +30,7 @@ export function NewArrivals() {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All")
   const wishlist = useWishlist()
   const { isAuthenticated } = useAuth()
+  const { getPriceInfo } = useCurrency()
   const router = useRouter()
   const products = allProducts.filter((product) => product.label === "New").slice(0, 4)
   const visibleProducts = products.filter(
@@ -166,35 +168,35 @@ export function NewArrivals() {
                     </Link>
                   </CardTitle>
 
-                  <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
-                    {product.originalPrice && (
-                      <del className="text-[12px] font-normal text-[#8b867e]">
-                        {formatRupees(product.originalPrice)}
-                      </del>
-                    )}
-                    <span
-                      className={product.originalPrice ? "text-[#e94717]" : ""}
-                    >
-                      {formatRupees(product.price)}
-                    </span>
-                  </div>
+                  {(() => {
+                    const priceInfo = getPriceInfo(product)
+                    return (
+                      <>
+                        <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
+                          {priceInfo.formattedOriginalPrice && (
+                            <del className="text-[12px] font-normal text-[#8b867e]">
+                              {priceInfo.formattedOriginalPrice}
+                            </del>
+                          )}
+                          <span
+                            className={priceInfo.hasDiscount ? "text-[#e94717]" : ""}
+                          >
+                            {priceInfo.formattedPrice}
+                          </span>
+                        </div>
 
-                  <CardDescription className="col-span-2 text-[12px] text-[#817c75]">
-                    {product.details}
-                  </CardDescription>
+                        <CardDescription className="col-span-2 text-[12px] text-[#817c75]">
+                          {product.details}
+                        </CardDescription>
 
-                  {getDiscountPercentage(
-                    product.originalPrice,
-                    product.price,
-                  ) > 0 && (
-                    <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
-                      {getDiscountPercentage(
-                        product.originalPrice,
-                        product.price,
-                      )}
-                      % off
-                    </Badge>
-                  )}
+                        {priceInfo.discountPercentage > 0 && (
+                          <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
+                            {priceInfo.discountPercentage}% off
+                          </Badge>
+                        )}
+                      </>
+                    )
+                  })()}
 
                   <Link
                     href="/arrival-new"

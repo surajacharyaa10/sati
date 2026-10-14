@@ -52,6 +52,12 @@ export async function getCart(userId) {
         ...(product.originalPrice !== undefined && product.originalPrice !== null
           ? { originalPrice: product.originalPrice }
           : {}),
+        ...(product.poundPrice !== undefined && product.poundPrice !== null
+          ? { poundPrice: product.poundPrice }
+          : {}),
+        ...(product.originalPoundPrice !== undefined && product.originalPoundPrice !== null
+          ? { originalPoundPrice: product.originalPoundPrice }
+          : {}),
         image: product.image,
         alt: product.alt,
         ...(item.size ? { size: item.size } : {}),

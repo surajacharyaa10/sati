@@ -27,7 +27,7 @@ import { Footer } from "@/app/components/footer"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/app/components/auth-provider"
 import { ordersApi, paymentApi, type OrderWithPayment } from "@/lib/api"
-import { formatRupees } from "@/lib/currency"
+import { formatRupees, formatPrice } from "@/lib/currency"
 
 function PaymentSuccessContent() {
   const { user } = useAuth()
@@ -149,10 +149,16 @@ function PaymentSuccessContent() {
     stripeDetails?.customer_email ||
     "—"
 
-  const totalAmount =
-    order?.subtotal ??
-    stripeDetails?.amount_total ??
-    0
+  const isGbpOrder = (order?.currency || stripeDetails?.currency || "").toUpperCase() === "GBP"
+  const slipCurrency = isGbpOrder ? "GBP" : "NPR"
+
+  const totalAmount = isGbpOrder && order?.subtotalPound != null
+    ? order.subtotalPound
+    : (order?.subtotal ?? stripeDetails?.amount_total ?? 0)
+
+  const totalSavings = isGbpOrder && order?.totalSavingsPound != null
+    ? order.totalSavingsPound
+    : (order?.totalSavings ?? 0)
 
   return (
     <main className="min-h-[75vh] bg-[#faf8f5] py-10 sm:py-16 text-[#171512]">
@@ -451,10 +457,16 @@ function PaymentSuccessContent() {
                           </td>
                           <td className="py-3 print:py-1.5 text-center text-[#706c66]">{item.quantity}</td>
                           <td className="py-3 print:py-1.5 text-right text-[#706c66]">
-                            {formatRupees(item.price)}
+                            {formatPrice(
+                              isGbpOrder && item.poundPrice != null ? item.poundPrice : item.price,
+                              slipCurrency
+                            )}
                           </td>
                           <td className="py-3 print:py-1.5 text-right font-semibold text-[#171512]">
-                            {formatRupees(item.price * item.quantity)}
+                            {formatPrice(
+                              (isGbpOrder && item.poundPrice != null ? item.poundPrice : item.price) * item.quantity,
+                              slipCurrency
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -476,12 +488,12 @@ function PaymentSuccessContent() {
               <div className="ml-auto max-w-xs space-y-2 print:space-y-1 text-xs print:text-[11px]">
                 <div className="flex justify-between text-[#706c66]">
                   <span>Subtotal</span>
-                  <span>{formatRupees(totalAmount)}</span>
+                  <span>{formatPrice(totalAmount, slipCurrency)}</span>
                 </div>
-                {order && order.totalSavings > 0 && (
+                {totalSavings > 0 && (
                   <div className="flex justify-between text-[#c43d17]">
                     <span>Discount Savings</span>
-                    <span>−{formatRupees(order.totalSavings)}</span>
+                    <span>−{formatPrice(totalSavings, slipCurrency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-[#706c66]">
@@ -490,7 +502,7 @@ function PaymentSuccessContent() {
                 </div>
                 <div className="flex justify-between border-t border-black/10 pt-2 print:pt-1 text-sm print:text-xs font-bold text-[#171512]">
                   <span>Total Paid</span>
-                  <span>{formatRupees(totalAmount)}</span>
+                  <span>{formatPrice(totalAmount, slipCurrency)}</span>
                 </div>
               </div>
             </div>

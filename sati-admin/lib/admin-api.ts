@@ -23,6 +23,8 @@ export type Product = {
   reviewCount: number
   price: number
   originalPrice?: number
+  poundPrice?: number
+  originalPoundPrice?: number
   label: "New" | "Limited" | "Bestseller" | "Sale"
   image: string
   alt: string
@@ -36,6 +38,8 @@ export type OrderItem = {
   name: string
   price: number
   originalPrice?: number
+  poundPrice?: number
+  originalPoundPrice?: number
   image: string
   alt: string
   size?: string
@@ -59,6 +63,9 @@ export type Order = {
   items: OrderItem[]
   subtotal: number
   totalSavings: number
+  subtotalPound?: number
+  totalSavingsPound?: number
+  currency?: string
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
   user?: { _id: string; name: string; email: string } | string
   customerName?: string
@@ -84,9 +91,11 @@ export type AdminSummary = {
   orders: number
   revenue: number
   savings: number
+  revenuePound: number
+  savingsPound: number
   customers: number
   statusCounts: Record<string, number>
-  topProducts: { name: string; units: number; revenue: number }[]
+  topProducts: { name: string; units: number; revenue: number; revenuePound?: number }[]
   recentOrders: Order[]
 }
 
@@ -132,6 +141,8 @@ async function requestWithSessionRenewal<T>(path: string, options: FetchOptions 
   } catch (error) {
     if (
       typeof window !== "undefined" &&
+      // Don't redirect if already on /login — prevents the loop
+      !window.location.pathname.startsWith("/login") &&
       error instanceof Error &&
       (error.message === "Not signed in" || error.message === "Admin access required")
     ) {
@@ -151,7 +162,8 @@ export type AdminUser = {
 }
 
 export const adminAuth = {
-  me: () => requestWithSessionRenewal<{ user: AdminUser }>("/api/auth/admin"),
+  // Use plain request (no auto-redirect) — page.tsx's checkAuth handles the redirect itself
+  me: () => request<{ user: AdminUser }>("/api/auth/admin"),
   signIn: (credentials: { email: string; password: string }) =>
     request<{ user: AdminUser }>(
       "/api/auth/signin",
@@ -219,6 +231,36 @@ export type ChatSession = {
   lastAdminReply?: string | null
   lastActivity?: string
   createdAt?: string
+  updatedAt?: string
+}
+
+export type SiteContactInfo = {
+  _id?: string
+  address: string
+  phone: string
+  gmail: string
+  availabilityStatus: string
+  availabilityDescription: string
+  socialLinks: {
+    instagram: string
+    facebook: string
+    tiktok: string
+    whatsapp: string
+    pinterest: string
+    youtube: string
+  }
+  updatedAt?: string
+  createdAt?: string
+}
+
+export type ContactMessageItem = {
+  _id: string
+  from_name: string
+  from_email: string
+  from_phone: string
+  message: string
+  status: "unread" | "read" | "replied"
+  createdAt: string
   updatedAt?: string
 }
 
@@ -321,20 +363,42 @@ export const adminApi = {
     const statusCounts: Record<string, number> = {}
     let revenue = 0
     let savings = 0
-    const productSales: Record<string, { name: string; units: number; revenue: number }> = {}
+    let revenuePound = 0
+    let savingsPound = 0
+    const productSales: Record<string, { name: string; units: number; revenue: number; revenuePound: number }> = {}
 
     for (const order of orders) {
       statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1
-      revenue += order.subtotal
-      savings += order.totalSavings
+
+      const isGbp = order.currency?.toUpperCase() === "GBP"
+
+      if (isGbp) {
+        // Order sold in GBP (£)
+        const gbpAmount = order.subtotalPound ?? (order.currency === "GBP" ? order.subtotal : 0)
+        revenuePound += gbpAmount
+        if (order.totalSavingsPound != null && order.totalSavingsPound > 0) {
+          savingsPound += order.totalSavingsPound
+        }
+      } else {
+        // Order sold in NPR (Rs)
+        revenue += order.subtotal || 0
+        savings += order.totalSavings || 0
+      }
+
       for (const item of order.items) {
         const existing = productSales[item.productId] ?? {
           name: item.name,
           units: 0,
           revenue: 0,
+          revenuePound: 0,
         }
         existing.units += item.quantity
-        existing.revenue += item.price * item.quantity
+        if (isGbp) {
+          const itemGbp = item.poundPrice != null ? item.poundPrice * item.quantity : 0
+          existing.revenuePound += itemGbp
+        } else {
+          existing.revenue += item.price * item.quantity
+        }
         productSales[item.productId] = existing
       }
     }
@@ -350,6 +414,8 @@ export const adminApi = {
       orders: orders.length,
       revenue,
       savings,
+      revenuePound,
+      savingsPound,
       customers: customers.length,
       statusCounts,
       topProducts,
@@ -397,4 +463,26 @@ export const adminApi = {
         method: "DELETE",
       }),
   },
+
+  contact: {
+    get: () => requestWithSessionRenewal<SiteContactInfo>("/api/contact"),
+    update: (data: Partial<SiteContactInfo>) =>
+      requestWithSessionRenewal<SiteContactInfo>("/api/contact", {
+        method: "PUT",
+        body: data as unknown as BodyInit,
+      }),
+    messages: {
+      list: () => requestWithSessionRenewal<ContactMessageItem[]>("/api/contact/messages"),
+      updateStatus: (id: string, status: ContactMessageItem["status"]) =>
+        requestWithSessionRenewal<ContactMessageItem>(`/api/contact/messages/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: { status } as unknown as BodyInit,
+        }),
+      remove: (id: string) =>
+        requestWithSessionRenewal<{ success: boolean }>(`/api/contact/messages/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        }),
+    },
+  },
 }
+

@@ -24,6 +24,8 @@ export function AddToBagButton({ product }: { product: StoreProduct }) {
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
+      poundPrice: product.poundPrice,
+      originalPoundPrice: product.originalPoundPrice,
       image: product.image,
       alt: product.alt,
     })

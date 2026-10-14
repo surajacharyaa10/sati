@@ -16,11 +16,11 @@ import {
   Loader2,
   ReceiptText,
 } from "lucide-react"
-import { Footer } from "@/app/components/footer"
 import { Navbar } from "@/app/components/navbar"
+import { Footer } from "@/app/components/footer"
 import { useAuth } from "@/app/components/auth-provider"
 import { ordersApi, type Order } from "@/lib/api"
-import { formatRupees } from "@/lib/currency"
+import { formatRupees, formatPrice } from "@/lib/currency"
 
 function getStatusBadge(status: Order["status"]) {
   switch (status) {
@@ -189,7 +189,9 @@ function OrdersContent() {
                   <div className="flex items-center gap-3">
                     {getStatusBadge(order.status)}
                     <span className="text-sm font-bold text-[#171512]">
-                      {formatRupees(order.subtotal)}
+                      {order.currency === "GBP" && order.subtotalPound != null
+                        ? formatPrice(order.subtotalPound, "GBP")
+                        : formatPrice(order.subtotal, (order.currency as any) || "NPR")}
                     </span>
                     <Link
                       href={`/payment-success?orderId=${orderIdentifier}`}
@@ -203,38 +205,44 @@ function OrdersContent() {
 
                 {/* Items in order */}
                 <div className="divide-y divide-black/5 px-5 sm:px-6">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-4 py-4">
-                      <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f7f3eb]">
-                        {item.image ? (
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            sizes="56px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-black/20">
-                            <Package className="size-6" />
+                  {order.items.map((item, idx) => {
+                    const isGbpOrder = order.currency === "GBP"
+                    const itemTotal = isGbpOrder && item.poundPrice != null
+                      ? formatPrice(item.poundPrice * item.quantity, "GBP")
+                      : formatPrice(item.price * item.quantity, (order.currency as any) || "NPR")
+                    return (
+                      <div key={idx} className="flex items-center gap-4 py-4">
+                        <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f7f3eb]">
+                          {item.image ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              sizes="56px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-black/20">
+                              <Package className="size-6" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="truncate text-sm font-semibold text-[#171512]">
+                            {item.name}
+                          </h4>
+                          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[#8e8a83]">
+                            {item.color && <span>Color: {item.color}</span>}
+                            {item.size && <span>Size: {item.size}</span>}
+                            <span>Qty: {item.quantity}</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="truncate text-sm font-semibold text-[#171512]">
-                          {item.name}
-                        </h4>
-                        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[#8e8a83]">
-                          {item.color && <span>Color: {item.color}</span>}
-                          {item.size && <span>Size: {item.size}</span>}
-                          <span>Qty: {item.quantity}</span>
+                        </div>
+                        <div className="text-right text-xs font-semibold text-[#171512]">
+                          {itemTotal}
                         </div>
                       </div>
-                      <div className="text-right text-xs font-semibold text-[#171512]">
-                        {formatRupees(item.price * item.quantity)}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )

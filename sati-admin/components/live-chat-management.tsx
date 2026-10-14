@@ -357,6 +357,11 @@ function ChatThread({
                     {product.originalPrice && (
                       <del className="text-zinc-500 text-[10px]">₹{product.originalPrice}</del>
                     )}
+                    {product.poundPrice != null && (
+                      <span className="text-amber-400 font-medium">
+                        (£{product.poundPrice}{product.originalPoundPrice ? ` · was £${product.originalPoundPrice}` : ""})
+                      </span>
+                    )}
                     <span className="text-zinc-600">·</span>
                     <span>{product.audience} {product.category}</span>
                     <span className="text-zinc-600">·</span>

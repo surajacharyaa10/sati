@@ -38,8 +38,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Order } from "@/lib/admin-api"
+import type { Order, PaymentInfo } from "@/lib/admin-api"
 import { adminApi } from "@/lib/admin-api"
+import { useExchangeRate, getDualAmount } from "@/lib/currency"
 
 const ORDER_BADGES: Record<string, string> = {
   pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
@@ -47,10 +48,6 @@ const ORDER_BADGES: Record<string, string> = {
   shipped: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   delivered: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
-}
-
-function formatAmount(amount: number) {
-  return `Rs ${amount.toLocaleString("en-NP")}`
 }
 
 function getCustomer(order: Order) {
@@ -61,6 +58,18 @@ function getCustomer(order: Order) {
     return { name: order.user.name || "Customer", email: order.user.email || "" }
   }
   return { name: "Customer", email: "" }
+}
+
+function checkIsPoundOrder(order: Order): boolean {
+  if (order.currency) {
+    return order.currency.toUpperCase() === "GBP"
+  }
+  const payment = order.payment as (PaymentInfo & { currency?: string; dataFromVerificationReq?: { currency?: string } }) | null | undefined
+  const paymentCurr = payment?.dataFromVerificationReq?.currency || payment?.currency
+  if (paymentCurr) {
+    return String(paymentCurr).toUpperCase() === "GBP"
+  }
+  return false
 }
 
 function getPaymentBadge(order: Order) {
@@ -93,9 +102,11 @@ function getPaymentBadge(order: Order) {
 function AdminSlipModal({
   order,
   onClose,
+  rate,
 }: {
   order: Order
   onClose: () => void
+  rate: number
 }) {
   const customer = getCustomer(order)
   const p = order.payment
@@ -115,6 +126,8 @@ function AdminSlipModal({
     window.print()
   }
 
+  const isPoundOrder = checkIsPoundOrder(order)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="relative w-full max-w-2xl rounded-2xl bg-white text-[#171512] shadow-2xl overflow-hidden my-8">
@@ -122,7 +135,9 @@ function AdminSlipModal({
         <div className="no-print flex items-center justify-between bg-[#171512] text-white px-6 py-4">
           <div className="flex items-center gap-2">
             <ReceiptText className="size-5 text-[#e94717]" />
-            <h3 className="font-serif text-lg">Official Payment Receipt Slip</h3>
+            <h3 className="font-serif text-lg">
+              Official Payment Receipt Slip ({isPoundOrder ? "GBP £" : "NPR Rs"})
+            </h3>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -150,11 +165,13 @@ function AdminSlipModal({
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#e94717]">
                 Official Payment Receipt
               </p>
-              <p className="text-[11px] text-[#8e8a83] mt-0.5">SATI Apparel Pvt. Ltd. · Kathmandu, Nepal</p>
+              <p className="text-[11px] text-[#8e8a83] mt-0.5">
+                {isPoundOrder ? "SATI Atelier (UK / Global) · London · support@sati.com" : "SATI Apparel Pvt. Ltd. · Kathmandu, Nepal"}
+              </p>
             </div>
             <div className="text-right">
               <span className="inline-flex items-center gap-1 rounded bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                <ShieldCheck className="size-3.5" /> PAID
+                <ShieldCheck className="size-3.5" /> PAID {isPoundOrder ? "(£ GBP)" : "(Rs NPR)"}
               </span>
               <p className="text-[11px] text-[#8e8a83] mt-1 font-mono">
                 Order #{order.id.slice(-8).toUpperCase()}
@@ -183,10 +200,14 @@ function AdminSlipModal({
                 {gateway === "esewa" ? (
                   <span className="inline-flex items-center gap-1 font-semibold text-[#171512]">
                     <img src="/logo/esewa.png" alt="eSewa" className="h-3.5 w-auto object-contain" />
-                    eSewa
+                    eSewa (NPR)
                   </span>
+                ) : gateway === "stripe" ? (
+                  <strong className="font-semibold text-[#171512]">
+                    Stripe Card {isPoundOrder ? "(GBP £)" : "(NPR Rs)"}
+                  </strong>
                 ) : (
-                  <strong className="capitalize text-[#171512]">{gateway}</strong>
+                  <strong className="capitalize text-[#171512]">{gateway} {isPoundOrder ? "(GBP £)" : "(NPR Rs)"}</strong>
                 )}
               </div>
               <p className="text-[#8e8a83] font-mono break-all text-[11px]">
@@ -225,38 +246,76 @@ function AdminSlipModal({
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#8e8a83] mb-2">Items</p>
             <div className="divide-y divide-black/5 border-y border-black/10">
-              {order.items.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="size-8 rounded object-cover border border-black/10 bg-[#f7f3eb]"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[#171512] truncate">{item.name}</p>
-                      <p className="text-[10px] text-[#8e8a83]">
-                        {[item.color, item.size && `Size ${item.size}`].filter(Boolean).join(" · ")} · Qty {item.quantity}
-                      </p>
+              {order.items.map((item, idx) => {
+                let itemFormattedPrice = ""
+                if (isPoundOrder) {
+                  const gbp = item.poundPrice != null ? item.poundPrice * item.quantity : (item.price * item.quantity) / (rate || 160)
+                  itemFormattedPrice = `£${gbp.toFixed(2)}`
+                } else {
+                  const npr = item.price * item.quantity
+                  itemFormattedPrice = `Rs ${npr.toLocaleString("en-NP")}`
+                }
+
+                return (
+                  <div key={idx} className="flex items-center justify-between py-2.5 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="size-8 rounded object-cover border border-black/10 bg-[#f7f3eb]"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#171512] truncate">{item.name}</p>
+                        <p className="text-[10px] text-[#8e8a83]">
+                          {[item.color, item.size && `Size ${item.size}`].filter(Boolean).join(" · ")} · Qty {item.quantity}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-[#171512]">{itemFormattedPrice}</p>
                     </div>
                   </div>
-                  <p className="font-semibold text-[#171512]">{formatAmount(item.price * item.quantity)}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
           {/* Total */}
-          <div className="flex justify-between items-baseline border-t border-black/10 pt-3">
-            <span className="font-semibold text-sm">Total Paid</span>
-            <span className="font-serif text-xl font-bold text-[#171512]">{formatAmount(order.subtotal)}</span>
-          </div>
+          {(() => {
+            let totalFormatted = ""
+            if (isPoundOrder) {
+              const totalGbp = order.subtotalPound ?? (order.currency === "GBP" ? order.subtotal : order.subtotal / (rate || 160))
+              totalFormatted = `£${totalGbp.toFixed(2)}`
+            } else {
+              totalFormatted = `Rs ${order.subtotal.toLocaleString("en-NP")}`
+            }
 
-          {/* Watermark / Barcode */}
+            return (
+              <div className="flex justify-between items-baseline border-t border-black/10 pt-3">
+                <div>
+                  <span className="font-semibold text-sm text-[#171512]">Total Paid</span>
+                  <p className="text-[10px] text-[#8e8a83]">
+                    {isPoundOrder ? "Settled in British Pound (£)" : "Settled in Nepalese Rupees (Rs)"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="font-serif text-2xl font-bold text-[#171512] block">
+                    {totalFormatted}
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Watermark / Footer */}
           <div className="flex items-center justify-between border-t border-dashed border-black/15 pt-3 text-[10px] text-[#8e8a83]">
-            <p>Authenticated Digital Slip · support@sati.com</p>
+            <p>
+              {isPoundOrder
+                ? "SATI Atelier (UK/Global) · support@sati.com"
+                : "SATI Apparel Pvt. Ltd. (Nepal) · support@sati.com"}
+            </p>
             <p className="font-mono">{String(txnId).slice(-12)}</p>
           </div>
         </div>
@@ -267,6 +326,7 @@ function AdminSlipModal({
 
 // ─── Main Orders Management Table ───────────────────────────────────────────
 export function OrdersManagement({ orders }: { orders: Order[] }) {
+  const { rate } = useExchangeRate()
   const [allOrders, setAllOrders] = useState<Order[]>(orders)
   const [statusFilter, setStatusFilter] = useState<string>("All")
   const [search, setSearch] = useState<string>("")
@@ -314,15 +374,22 @@ export function OrdersManagement({ orders }: { orders: Order[] }) {
         <AdminSlipModal
           order={slipModalOrder}
           onClose={() => setSlipModalOrder(null)}
+          rate={rate}
         />
       )}
 
       <Card className="rounded-2xl border-border bg-card shadow-xs">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="font-serif text-2xl font-medium">Orders</CardTitle>
-            <CardDescription>
-              {allOrders.length} total orders · Real-time fulfillment & payment tracking
+            <div className="flex items-center gap-3">
+              <CardTitle className="font-serif text-2xl font-medium">Orders</CardTitle>
+              <Badge variant="outline" className="border-border text-xs gap-1.5 font-normal py-1 px-3">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Market: <span className="font-semibold text-foreground">1 GBP = Rs {rate.toFixed(2)}</span>
+              </Badge>
+            </div>
+            <CardDescription className="mt-1">
+              {allOrders.length} total orders · Real-time fulfillment & dual currency tracking
             </CardDescription>
           </div>
 
@@ -424,7 +491,19 @@ export function OrdersManagement({ orders }: { orders: Order[] }) {
                         </TableCell>
 
                         <TableCell className="font-semibold text-xs text-foreground">
-                          {formatAmount(order.subtotal)}
+                          {(() => {
+                            const isGbpOrder = checkIsPoundOrder(order)
+                            const totalGbp = isGbpOrder ? (order.subtotalPound ?? order.subtotal) : order.subtotalPound
+                            const totalNpr = isGbpOrder ? null : order.subtotal
+                            const dual = getDualAmount({ gbp: totalGbp, npr: totalNpr }, rate)
+
+                            return (
+                              <div className="flex flex-col text-xs leading-tight">
+                                <span className="font-bold text-foreground">{dual.gbpFormatted}</span>
+                                <span className="text-[11px] text-muted-foreground font-medium">{dual.nprFormatted}</span>
+                              </div>
+                            )
+                          })()}
                         </TableCell>
 
                         <TableCell>
@@ -516,9 +595,18 @@ export function OrdersManagement({ orders }: { orders: Order[] }) {
                                         </div>
                                         <div className="mt-1 flex items-center justify-between text-xs">
                                           <span className="text-muted-foreground">Qty: {item.quantity}</span>
-                                          <span className="font-semibold text-foreground">
-                                            {formatAmount(item.price * item.quantity)}
-                                          </span>
+                                          {(() => {
+                                            const itemGbp = item.poundPrice != null ? item.poundPrice * item.quantity : null
+                                            const itemNpr = item.price * item.quantity
+                                            const itemDual = getDualAmount({ gbp: itemGbp, npr: itemNpr }, rate)
+
+                                            return (
+                                              <div className="text-right leading-tight">
+                                                <span className="font-bold text-foreground block">{itemDual.gbpFormatted}</span>
+                                                <span className="text-[11px] text-muted-foreground">{itemDual.nprFormatted}</span>
+                                              </div>
+                                            )
+                                          })()}
                                         </div>
                                       </div>
                                     </div>
@@ -567,16 +655,39 @@ export function OrdersManagement({ orders }: { orders: Order[] }) {
                                   <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                                     Settlement Total
                                   </p>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Subtotal:</span>
-                                    <span className="font-semibold">{formatAmount(order.subtotal)}</span>
-                                  </div>
-                                  {order.totalSavings > 0 && (
-                                    <div className="flex justify-between text-emerald-400">
-                                      <span>Savings:</span>
-                                      <span>−{formatAmount(order.totalSavings)}</span>
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const isGbpOrder = checkIsPoundOrder(order)
+                                    const totalGbp = isGbpOrder ? (order.subtotalPound ?? order.subtotal) : order.subtotalPound
+                                    const totalNpr = isGbpOrder ? null : order.subtotal
+                                    const subDual = getDualAmount({ gbp: totalGbp, npr: totalNpr }, rate)
+
+                                    const savGbp = isGbpOrder ? (order.totalSavingsPound ?? order.totalSavings) : order.totalSavingsPound
+                                    const savNpr = isGbpOrder ? null : order.totalSavings
+                                    const savDual = (order.totalSavings > 0 || (order.totalSavingsPound && order.totalSavingsPound > 0))
+                                      ? getDualAmount({ gbp: savGbp, npr: savNpr }, rate)
+                                      : null
+
+                                    return (
+                                      <>
+                                        <div className="flex justify-between items-baseline">
+                                          <span className="text-muted-foreground">Subtotal:</span>
+                                          <div className="text-right leading-tight">
+                                            <span className="font-bold text-foreground block">{subDual.gbpFormatted}</span>
+                                            <span className="text-[11px] text-muted-foreground">{subDual.nprFormatted}</span>
+                                          </div>
+                                        </div>
+                                        {savDual && (
+                                          <div className="flex justify-between items-baseline text-emerald-400">
+                                            <span>Savings:</span>
+                                            <div className="text-right leading-tight">
+                                              <span className="font-semibold block">−{savDual.gbpFormatted}</span>
+                                              <span className="text-[10px]">−{savDual.nprFormatted}</span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
                                   <div className="pt-1 flex justify-end">
                                     <Button
                                       size="sm"

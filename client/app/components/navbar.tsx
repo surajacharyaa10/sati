@@ -16,7 +16,8 @@ import {
 import { useAuth } from "@/app/components/auth-provider"
 import { useCart } from "@/app/components/cart-provider"
 import { useWishlist } from "@/lib/wishlist-store"
-import { formatRupees } from "@/lib/currency"
+import { formatRupees, formatPounds } from "@/lib/currency"
+import { useCurrency } from "@/lib/currency-context"
 import { NotificationsPanel } from "@/app/components/notifications-panel"
 import { useProducts, matchesSearch } from "@/lib/store-products"
 
@@ -30,6 +31,7 @@ const navLinks = [
 
 export function Navbar() {
   const router = useRouter()
+  const { currency, toggleCurrency, getPriceInfo } = useCurrency()
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
@@ -106,9 +108,28 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Shipping announcement */}
-      <div className="flex min-h-9 items-center justify-center bg-[#e94717] px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.12em] text-white sm:text-sm">
-        Free shipping on orders over {formatRupees(120)} — easy returns within
-        30 days
+      <div className="relative flex min-h-9 items-center justify-center bg-[#e94717] px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.12em] text-white sm:text-sm">
+        <span>
+          Free shipping on orders over {currency === "GBP" ? "£20" : formatRupees(120)} — easy returns within 30 days
+        </span>
+{user?.country === 'UK' ? (
+          <span className="sm:absolute sm:right-6 ml-3 text-white font-black underline underline-offset-2">£</span>
+        ) : user?.country === 'Nepal' ? (
+          <span className="sm:absolute sm:right-6 ml-3 text-white font-black underline underline-offset-2">Rs</span>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleCurrency}
+            aria-label={`Switch currency. Current: ${currency}`}
+            className="sm:absolute sm:right-6 ml-3 inline-flex items-center gap-1 rounded-full bg-black/20 hover:bg-black/35 px-2.5 py-0.5 text-[11px] font-bold text-white transition tracking-normal border border-white/20"
+            title={`Switch between Rs (NPR) and £ (GBP). Active: ${currency}`}
+          >
+            <span className={currency === "NPR" ? "text-white font-black underline underline-offset-2" : "opacity-70"}>Rs</span>
+            <span className="opacity-40">/</span>
+            <span className={currency === "GBP" ? "text-white font-black underline underline-offset-2" : "opacity-70"}>£</span>
+          </button>
+        )}
+
       </div>
 
       {/* Main navbar */}
@@ -260,9 +281,19 @@ export function Navbar() {
                                 </p>
                               </div>
                               <div className="text-right">
-                                <span className={`text-xs font-semibold ${product.originalPrice ? "text-[#e94717]" : "text-[#171512]"}`}>
-                                  {formatRupees(product.price)}
-                                </span>
+                                {(() => {
+                                  const pInfo = getPriceInfo(product)
+                                  return (
+                                    <>
+                                      {pInfo.formattedOriginalPrice && (
+                                        <del className="block text-[10px] text-[#8b867e]">{pInfo.formattedOriginalPrice}</del>
+                                      )}
+                                      <span className={`text-xs font-semibold ${pInfo.hasDiscount ? "text-[#e94717]" : "text-[#171512]"}`}>
+                                        {pInfo.formattedPrice}
+                                      </span>
+                                    </>
+                                  )
+                                })()}
                               </div>
                             </Link>
                           ))}

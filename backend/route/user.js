@@ -4,7 +4,7 @@ import User from '../module/user.js';
 import { hashPassword } from '../services/password.js';
 
 const router = express.Router();
-const editableFields = ['name', 'email'];
+const editableFields = ['name', 'email', 'phoneNumber', 'country'];
 
 const sendDatabaseError = (res, error) => {
 	if (error.name === 'ValidationError' || error.name === 'CastError') {
@@ -28,7 +28,7 @@ const validateUserId = (req, res, next) => {
 };
 
 router.post('/', async (req, res) => {
-	const { name, email, password } = req.body ?? {};
+	const { name, email, password, country, phoneNumber } = req.body ?? {};
 
 	if (
 		typeof name !== 'string' ||
@@ -42,6 +42,9 @@ router.post('/', async (req, res) => {
 		return res.status(400).json({ error: 'Enter a name, valid email, and password between 8 and 128 characters' });
 	}
 
+	const normalizedCountry = country === 'UK' ? 'UK' : 'Nepal';
+	const currency = normalizedCountry === 'UK' ? 'GBP' : 'NPR';
+
 	// The admin account is authenticated from environment variables only.
 	// Never persist a customer record that would shadow or duplicate it.
 	if (email.trim().toLowerCase() === (process.env.ADMIN_USERNAME ?? '').trim().toLowerCase()) {
@@ -50,8 +53,11 @@ router.post('/', async (req, res) => {
 
 	try {
 		const user = await User.create({
-			name,
-			email,
+			name: name.trim(),
+			email: email.trim().toLowerCase(),
+			country: normalizedCountry,
+			phoneNumber: typeof phoneNumber === 'string' ? phoneNumber.trim() : '',
+			currency,
 			passwordHash: await hashPassword(password),
 		});
 

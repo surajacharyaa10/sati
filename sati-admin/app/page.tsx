@@ -11,6 +11,7 @@ import { CustomersManagement } from "@/components/customers-management"
 import JournalManagement from "@/components/journal-mamagement"
 import { NotificationsManagement } from "@/components/notifications-management"
 import { LiveChatManagement } from "@/components/live-chat-management"
+import { ContactManagement } from "@/components/contact-management"
 import { adminApi, adminAuth } from "@/lib/admin-api"
 import type { Product, Order, User } from "@/lib/admin-api"
 
@@ -73,6 +74,7 @@ export default function AdminPage() {
     orders:        "Orders",
     customers:     "Customers",
     liveChat:      "Live Chat",
+    contact:       "Contact & Social Media",
     journal:       "Journal",
     notifications: "Notifications",
   }
@@ -97,6 +99,7 @@ export default function AdminPage() {
             {activeTab === "orders" && <OrdersManagement orders={orders} />}
             {activeTab === "customers" && <CustomersManagement users={users} />}
             {activeTab === "liveChat" && <LiveChatManagement />}
+            {activeTab === "contact" && <ContactManagement />}
             {activeTab === "journal" && <JournalManagement />}
             {activeTab === "notifications" && <NotificationsManagement />}
           </main>

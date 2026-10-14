@@ -24,6 +24,7 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -96,6 +97,13 @@ function LoginContent() {
                   <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                     Password
                   </Label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-xs text-zinc-400 hover:text-[#e94717] transition-colors"
+                  >
+                    Forgot password?
+                  </button>
                 </div>
                 <div className="relative">
                   <Input
@@ -131,10 +139,46 @@ function LoginContent() {
                 </p>
               )}
             </form>
-
-         
           </CardContent>
         </Card>
+
+        {/* Forgot Password Modal */}
+        {forgotOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl text-white space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="font-serif text-lg font-semibold text-white">Admin Account Recovery</h3>
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(false)}
+                  className="rounded-full p-1 text-zinc-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                For maximum security, Master Administrator credentials for the management console are managed via backend environment configuration:
+              </p>
+              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3.5 space-y-2 text-xs font-mono text-zinc-300">
+                <p className="text-zinc-400 font-sans text-[11px] font-semibold uppercase">Configuration Key</p>
+                <p className="text-[#e94717]">ADMIN_USERNAME=<span className="text-white">admin</span></p>
+                <p className="text-[#e94717]">ADMIN_PASSWORD=<span className="text-white">••••••••</span></p>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                To reset or update the admin credentials, update the <span className="font-mono text-white">.env</span> file in the <span className="font-mono text-white">backend/</span> directory and restart the service.
+              </p>
+              <div className="pt-2 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setForgotOpen(false)}
+                  className="h-9 px-4 rounded-lg bg-[#e94717] hover:bg-[#d03e12] text-xs font-semibold text-white"
+                >
+                  Understood
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

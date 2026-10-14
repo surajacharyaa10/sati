@@ -34,6 +34,7 @@ import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
+import { useCurrency } from "@/lib/currency-context"
 
 type SortOrder = "Featured" | "Price low" | "Price high"
 
@@ -42,7 +43,7 @@ const sortOrders: SortOrder[] = ["Featured", "Price low", "Price high"]
 function filterProductsByKind(products: StoreProduct[], kind: CollectionKind) {
   if (kind === "women") return products.filter((product) => product.audience === "Women")
   if (kind === "men") return products.filter((product) => product.audience === "Men")
-  if (kind === "sale") return products.filter((product) => product.originalPrice !== undefined)
+  if (kind === "sale") return products.filter((product) => product.originalPrice !== undefined || product.originalPoundPrice !== undefined)
   return products
 }
 
@@ -80,13 +81,16 @@ export function CollectionScreen({ kind }: { kind: CollectionKind }) {
     }
   }, [kind])
 
+  const { currency } = useCurrency()
   const selectedCategory = category === "All" || availableCategories.includes(category) ? category : "All"
   const categoryOptions: (ProductCategory | "All")[] = ["All", ...availableCategories]
   const filteredProducts = products.filter((product) => selectedCategory === "All" || product.category === selectedCategory)
+  const getSortPrice = (p: StoreProduct) =>
+    currency === "GBP" && p.poundPrice != null ? p.poundPrice : p.price
   const visibleProducts = sortOrder === "Price low"
-    ? [...filteredProducts].sort((a, b) => a.price - b.price)
+    ? [...filteredProducts].sort((a, b) => getSortPrice(a) - getSortPrice(b))
     : sortOrder === "Price high"
-      ? [...filteredProducts].sort((a, b) => b.price - a.price)
+      ? [...filteredProducts].sort((a, b) => getSortPrice(b) - getSortPrice(a))
       : filteredProducts
 
   return (
@@ -272,18 +276,28 @@ export function CollectionProductCard({
         <CardTitle className="text-xs font-semibold sm:text-sm">
           <Link href={`/product/${product.id}`} className="hover:text-[#e94717]">{product.name}</Link>
         </CardTitle>
-        <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
-          {product.originalPrice && <del className="text-[12px] font-normal text-[#8b867e]">{formatRupees(product.originalPrice)}</del>}
-          <span className={product.originalPrice ? "text-[#e94717]" : ""}>{formatRupees(product.price)}</span>
-        </div>
-        <CardDescription className="col-span-2 text-[12px] text-[#817c75]">
-          {product.details}
-        </CardDescription>
-        {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
-          <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
-            {getDiscountPercentage(product.originalPrice, product.price)}% off
-          </Badge>
-        )}
+        {(() => {
+          const { getPriceInfo } = useCurrency()
+          const priceInfo = getPriceInfo(product)
+          return (
+            <>
+              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs font-semibold">
+                {priceInfo.formattedOriginalPrice && (
+                  <del className="text-[12px] font-normal text-[#8b867e]">{priceInfo.formattedOriginalPrice}</del>
+                )}
+                <span className={priceInfo.hasDiscount ? "text-[#e94717]" : ""}>{priceInfo.formattedPrice}</span>
+              </div>
+              <CardDescription className="col-span-2 text-[12px] text-[#817c75]">
+                {product.details}
+              </CardDescription>
+              {priceInfo.discountPercentage > 0 && (
+                <Badge className="col-span-2 w-fit rounded-none bg-[#fae5dd] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#c43d17] hover:bg-[#fae5dd]">
+                  {priceInfo.discountPercentage}% off
+                </Badge>
+              )}
+            </>
+          )
+        })()}
       </CardHeader>
     </Card>
   )

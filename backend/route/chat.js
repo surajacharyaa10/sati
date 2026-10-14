@@ -32,8 +32,8 @@ Material: ${productContext.material ?? 'N/A'}
 Fit: ${productContext.fit ?? 'N/A'}
 Sizes: ${(productContext.sizes ?? []).join(', ')}
 Colors: ${(productContext.colors ?? []).join(', ')}
-Price: ₹${productContext.price ?? 'N/A'}
-${productContext.originalPrice ? `Original Price: ₹${productContext.originalPrice}` : ''}
+Price: Rs ${productContext.price ?? 'N/A'}${productContext.poundPrice != null ? ` (£${productContext.poundPrice})` : ''}
+${productContext.originalPrice ? `Original Price: Rs ${productContext.originalPrice}${productContext.originalPoundPrice != null ? ` (£${productContext.originalPoundPrice})` : ''}` : (productContext.originalPoundPrice != null ? `Original Price: £${productContext.originalPoundPrice}` : '')}
 Description: ${productContext.description ?? ''}
 Details: ${productContext.details ?? ''}
 

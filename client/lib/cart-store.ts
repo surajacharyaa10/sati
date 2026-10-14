@@ -10,6 +10,8 @@ export type CartItem = {
   name: string
   price: number
   originalPrice?: number
+  poundPrice?: number
+  originalPoundPrice?: number
   image: string
   alt: string
   size?: string
@@ -35,6 +37,9 @@ function normalizeCart(value: unknown): CartItem[] {
     typeof item?.id === "string" &&
     typeof item.name === "string" &&
     typeof item.price === "number" && Number.isFinite(item.price) &&
+    (item.originalPrice === undefined || typeof item.originalPrice === "number") &&
+    (item.poundPrice === undefined || typeof item.poundPrice === "number") &&
+    (item.originalPoundPrice === undefined || typeof item.originalPoundPrice === "number") &&
     typeof item.image === "string" &&
     typeof item.alt === "string" &&
     (item.size === undefined || typeof item.size === "string") &&

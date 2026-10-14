@@ -41,23 +41,73 @@ export type User = {
   _id: string
   name: string
   email: string
+  country?: "Nepal" | "UK"
+  phoneNumber?: string
+  currency?: "NPR" | "GBP"
   createdAt: string
   updatedAt: string
 }
 
-export type UserInput = Pick<User, "name" | "email">
+export type UserInput = Pick<User, "name" | "email"> & {
+  country?: "Nepal" | "UK"
+  phoneNumber?: string
+}
 export type CreateUserInput = UserInput & { password: string }
-export type AuthUser = { id: string; name: string; email: string; avatarUrl: string | null }
+export type AuthUser = {
+  id: string
+  name: string
+  email: string
+  country?: "Nepal" | "UK"
+  phoneNumber?: string
+  currency?: "NPR" | "GBP"
+  avatarUrl: string | null
+  role?: string
+  isAdmin?: boolean
+}
 
 export const authApi = {
   signIn: (credentials: { email: string; password: string }) =>
     apiRequest<{ user: AuthUser }>("/api/auth/signin", { method: "POST", body: credentials }),
   currentUser: () => apiRequest<{ user: AuthUser }>("/api/auth/me"),
   signOut: () => apiRequest<void>("/api/auth/signout", { method: "POST" }),
-  updateProfile: (profile: { name: string; email: string; photo?: File; removePhoto?: boolean }) => {
+  sendSignupOtp: (data: {
+    name: string
+    email: string
+    country: "Nepal" | "UK"
+    phoneNumber: string
+    password: string
+  }) =>
+    apiRequest<{
+      success: boolean
+      message: string
+      email: string
+      country: "Nepal" | "UK"
+      currency: "NPR" | "GBP"
+      devOtp?: string
+    }>("/api/auth/send-signup-otp", { method: "POST", body: data }),
+  verifySignupOtp: (data: { email: string; otp: string }) =>
+    apiRequest<{ success: boolean; message: string; user: AuthUser }>(
+      "/api/auth/verify-signup-otp",
+      { method: "POST", body: data }
+    ),
+  resendSignupOtp: (email: string) =>
+    apiRequest<{ success: boolean; message: string; devOtp?: string }>(
+      "/api/auth/resend-signup-otp",
+      { method: "POST", body: { email } }
+    ),
+  updateProfile: (profile: {
+    name: string
+    email: string
+    country?: "Nepal" | "UK"
+    phoneNumber?: string
+    photo?: File
+    removePhoto?: boolean
+  }) => {
     const body = new FormData()
     body.set("name", profile.name)
     body.set("email", profile.email)
+    if (profile.country) body.set("country", profile.country)
+    if (profile.phoneNumber !== undefined) body.set("phoneNumber", profile.phoneNumber)
     if (profile.photo) body.set("photo", profile.photo)
     if (profile.removePhoto) body.set("removePhoto", "true")
 
@@ -65,6 +115,26 @@ export const authApi = {
   },
   changePassword: (data: { currentPassword?: string; newPassword: string }) =>
     apiRequest<{ message: string }>("/api/auth/change-password", { method: "POST", body: data }),
+  forgotPassword: (email: string) =>
+    apiRequest<{ success: boolean; message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+    }),
+  verifyResetOtp: (data: { email: string; otp: string }) =>
+    apiRequest<{ success: boolean; message: string }>("/api/auth/verify-reset-otp", {
+      method: "POST",
+      body: data,
+    }),
+  resetPassword: (data: { email: string; otp: string; newPassword: string }) =>
+    apiRequest<{ success: boolean; message: string; user: AuthUser }>("/api/auth/reset-password", {
+      method: "POST",
+      body: data,
+    }),
+  resendResetOtp: (email: string) =>
+    apiRequest<{ success: boolean; message: string }>("/api/auth/resend-reset-otp", {
+      method: "POST",
+      body: { email },
+    }),
 }
 
 export const wishlistApi = {
@@ -190,11 +260,12 @@ export const paymentApi = {
     products: { name: string; image: string; price: number; quantity: number }[],
     directItem?: { productId: string; quantity?: number; size?: string; color?: string },
     address?: string,
-    phoneNumber?: string
+    phoneNumber?: string,
+    currency?: string
   ) =>
     apiRequest<{ id: string; url: string }>("/api/stripe/create-checkout-session", {
       method: "POST",
-      body: { products, directItem, address, phoneNumber },
+      body: { products, directItem, address, phoneNumber, currency },
     }),
 
   // eSewa — initialize payment for a single product (Buy Now)
@@ -244,6 +315,8 @@ export type OrderItem = {
   name: string
   price: number
   originalPrice?: number
+  poundPrice?: number
+  originalPoundPrice?: number
   image?: string
   alt?: string
   size?: string
@@ -270,6 +343,9 @@ export type Order = {
   items: OrderItem[]
   subtotal: number
   totalSavings: number
+  subtotalPound?: number
+  totalSavingsPound?: number
+  currency?: string
   status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
   address?: string
   phoneNumber?: string
@@ -282,4 +358,37 @@ export type OrderWithPayment = Order & { payment?: PaymentRecord | null }
 export const ordersApi = {
   list: () => apiRequest<Order[]>("/api/orders/me"),
   get: (orderId: string) => apiRequest<OrderWithPayment>(`/api/orders/me/${encodeURIComponent(orderId)}`),
+}
+
+export type SiteContact = {
+  _id?: string
+  address: string
+  phone: string
+  gmail: string
+  availabilityStatus?: string
+  availabilityDescription?: string
+  socialLinks?: {
+    instagram?: string
+    facebook?: string
+    tiktok?: string
+    whatsapp?: string
+    pinterest?: string
+    youtube?: string
+  }
+}
+
+export type ContactFormData = {
+  from_name: string
+  from_email: string
+  from_phone?: string
+  message: string
+}
+
+export const contactApi = {
+  get: () => apiRequest<SiteContact>("/api/contact"),
+  send: (data: ContactFormData) =>
+    apiRequest<{ success: boolean; message: string }>("/api/contact/send", {
+      method: "POST",
+      body: data,
+    }),
 }

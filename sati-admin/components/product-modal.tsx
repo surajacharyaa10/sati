@@ -39,6 +39,8 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
   const [category, setCategory] = useState<"Sets" | "Dresses" | "Outerwear" | "Tops">(product?.category ?? "Sets")
   const [price, setPrice] = useState(product?.price ? String(product.price) : "")
   const [originalPrice, setOriginalPrice] = useState(product?.originalPrice ? String(product.originalPrice) : "")
+  const [poundPrice, setPoundPrice] = useState(product?.poundPrice ? String(product.poundPrice) : "")
+  const [originalPoundPrice, setOriginalPoundPrice] = useState(product?.originalPoundPrice ? String(product.originalPoundPrice) : "")
   const [label, setLabel] = useState<"New" | "Limited" | "Bestseller" | "Sale">(product?.label ?? "New")
   const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : "")
   const [description, setDescription] = useState(product?.description ?? "")
@@ -151,7 +153,9 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
 
     if (!name.trim()) { setError("Please enter a product name."); return }
     if (!isEdit && !productId.trim()) { setError("Please enter a product ID."); return }
-    if (!price || isNaN(Number(price))) { setError("Please enter a valid price."); return }
+    if (!price || isNaN(Number(price))) { setError("Please enter a valid price in Rs."); return }
+    if (poundPrice && isNaN(Number(poundPrice))) { setError("Please enter a valid price in £."); return }
+    if (originalPoundPrice && isNaN(Number(originalPoundPrice))) { setError("Please enter a valid original price in £."); return }
     if (images.length === 0) { setError("Please upload at least one product image."); return }
 
     setLoading(true)
@@ -175,6 +179,8 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
         colors,
         price: Number(price),
         originalPrice: originalPrice ? Number(originalPrice) : undefined,
+        poundPrice: poundPrice ? Number(poundPrice) : undefined,
+        originalPoundPrice: originalPoundPrice ? Number(originalPoundPrice) : undefined,
         label,
         stock: Number(stock) || 0,
         active,
@@ -299,9 +305,9 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
               </select>
             </div>
 
-            {/* Price */}
+            {/* Price (Rs) */}
             <div>
-              <label htmlFor="prod-price" className={labelClass}>Price (₹) *</label>
+              <label htmlFor="prod-price" className={labelClass}>Price (₹ / Rs) *</label>
               <input
                 id="prod-price"
                 type="number"
@@ -314,9 +320,9 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
               />
             </div>
 
-            {/* Original Price */}
+            {/* Original Price (Rs) */}
             <div>
-              <label htmlFor="prod-orig-price" className={labelClass}>Original Price (₹)</label>
+              <label htmlFor="prod-orig-price" className={labelClass}>Original Price (₹ / Rs)</label>
               <input
                 id="prod-orig-price"
                 type="number"
@@ -325,6 +331,36 @@ export function ProductModal({ product, onClose, onSaved }: Props) {
                 value={originalPrice}
                 onChange={(e) => setOriginalPrice(e.target.value)}
                 placeholder="3999 (if on sale)"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Price (Pound) */}
+            <div>
+              <label htmlFor="prod-pound-price" className={labelClass}>Price (£ / Pound)</label>
+              <input
+                id="prod-pound-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={poundPrice}
+                onChange={(e) => setPoundPrice(e.target.value)}
+                placeholder="25.00"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Original Price (Pound) */}
+            <div>
+              <label htmlFor="prod-orig-pound-price" className={labelClass}>Original Price (£ / Pound)</label>
+              <input
+                id="prod-orig-pound-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={originalPoundPrice}
+                onChange={(e) => setOriginalPoundPrice(e.target.value)}
+                placeholder="35.00 (if on sale)"
                 className={inputClass}
               />
             </div>

@@ -66,6 +66,7 @@ router.post('/initialize-item', authenticate, async (req, res) => {
     const amount = Number(totalPrice) || product.price * qty;
     const savings = Math.max((product.originalPrice ?? product.price) - product.price, 0) * qty;
 
+    const hasPound = product.poundPrice != null;
     // Create a standalone order for this single direct item (cart is NOT touched or cleared)
     const order = await Order.create({
       user: req.authUserId,
@@ -74,6 +75,8 @@ router.post('/initialize-item', authenticate, async (req, res) => {
         name: product.name,
         price: product.price,
         originalPrice: product.originalPrice ?? undefined,
+        poundPrice: product.poundPrice ?? undefined,
+        originalPoundPrice: product.originalPoundPrice ?? undefined,
         image: product.image,
         alt: product.alt,
         size: size || undefined,
@@ -82,6 +85,11 @@ router.post('/initialize-item', authenticate, async (req, res) => {
       }],
       subtotal: amount,
       totalSavings: savings,
+      ...(hasPound ? {
+        subtotalPound: product.poundPrice * qty,
+        totalSavingsPound: Math.max((product.originalPoundPrice ?? product.poundPrice) - product.poundPrice, 0) * qty,
+      } : {}),
+      currency: 'NPR',
       address: req.body.address || '',
       phoneNumber: req.body.phoneNumber || '',
     });

@@ -1,9 +1,11 @@
 import { getStripe } from '../config/stripe.js';
 
 
-export async function createCheckoutSession(products, orderId = null, address = '', phoneNumber = '') {
+export async function createCheckoutSession(products, orderId = null, address = '', phoneNumber = '', currency = 'usd') {
   const stripe = getStripe();
   const clientOrigin = process.env.CLIENT_ORIGIN;
+
+  const effectiveCurrency = (currency || 'usd').toLowerCase();
 
   const lineItems = products.map((product) => {
     const img = product.imgdata || product.image;
@@ -13,7 +15,7 @@ export async function createCheckoutSession(products, orderId = null, address = 
 
     return {
       price_data: {
-        currency: 'usd',
+        currency: effectiveCurrency,
         product_data: {
           name: product.dish || product.name || 'Product',
           images: isAbsoluteUrl ? [img] : [],

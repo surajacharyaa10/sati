@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Mail, UserPlus, Calendar } from "lucide-react"
+import { Search, Mail, Phone, MapPin, Calendar } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -47,6 +47,8 @@ export function CustomersManagement({ users }: { users: User[] }) {
               <TableRow>
                 <TableHead>Customer</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Country</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="text-right">ID</TableHead>
               </TableRow>
@@ -73,6 +75,18 @@ export function CustomersManagement({ users }: { users: User[] }) {
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Mail className="size-3" />
                         {user.email}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Phone className="size-3" />
+                        {(user as { phoneNumber?: string }).phoneNumber || <span className="text-zinc-500 italic">—</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="size-3" />
+                        {(user as { country?: string }).country || '—'}
                       </div>
                     </TableCell>
                     <TableCell>

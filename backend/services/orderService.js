@@ -6,7 +6,7 @@ export { ORDER_STATUSES };
 
 const roundMoney = (value) => Math.round(value * 100) / 100;
 
-export async function createOrderFromCart(userId, address, phoneNumber) {
+export async function createOrderFromCart(userId, address, phoneNumber, currency = 'NPR') {
   const cart = await getCart(userId);
   if (cart.length === 0) return null;
 
@@ -21,6 +21,8 @@ export async function createOrderFromCart(userId, address, phoneNumber) {
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice ?? undefined,
+      poundPrice: product.poundPrice ?? undefined,
+      originalPoundPrice: product.originalPoundPrice ?? undefined,
       image: product.image,
       alt: product.alt,
       size: line.size,
@@ -39,11 +41,29 @@ export async function createOrderFromCart(userId, address, phoneNumber) {
     ),
   );
 
+  const hasPound = items.some((item) => item.poundPrice != null);
+  const subtotalPound = hasPound
+    ? roundMoney(items.reduce((sum, item) => sum + (item.poundPrice ?? 0) * item.quantity, 0))
+    : undefined;
+  const totalSavingsPound = hasPound
+    ? roundMoney(
+        items.reduce(
+          (sum, item) =>
+            sum +
+            Math.max((item.originalPoundPrice ?? item.poundPrice ?? 0) - (item.poundPrice ?? 0), 0) *
+              item.quantity,
+          0,
+        ),
+      )
+    : undefined;
+
   const order = await Order.create({
     user: userId,
     items,
     subtotal,
     totalSavings,
+    ...(subtotalPound !== undefined ? { subtotalPound, totalSavingsPound } : {}),
+    currency: currency ? String(currency).toUpperCase() : 'NPR',
     address,
     phoneNumber,
   });

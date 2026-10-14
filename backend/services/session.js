@@ -71,6 +71,10 @@ export const optionalAuth = (req, res, next) => {
 
 export const isUserAdmin = async (authUserId) => {
   if (!authUserId) return false;
+  // Hardcoded admin sessions use "admin-<timestamp>" which is not a valid ObjectId
+  if (String(authUserId).startsWith('admin-')) {
+    return true;
+  }
   // Only consider admin if the user exists in DB with admin role or matches env admin credentials
   if (!mongoose.isValidObjectId(authUserId)) {
     return false;

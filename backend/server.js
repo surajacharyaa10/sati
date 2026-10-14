@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+dotenv.config();
 import connectDB from './services/db.js';
 import authRoutes from './route/auth.js';
 import userRoutes from './route/user.js';
@@ -15,6 +16,7 @@ import notificationRoutes from './route/notifications.js';
 import chatRoutes from './route/chat.js';
 import stripeRoutes from './route/stripe.js';
 import esewaRoutes from './route/esewa.js';
+import contactRoutes from './route/contact.js';
 
 dotenv.config();
 
@@ -60,6 +62,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/esewa', esewaRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

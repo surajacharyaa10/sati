@@ -83,6 +83,16 @@ const productSchema = new mongoose.Schema(
       default: undefined,
       min: 0,
     },
+    poundPrice: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
+    originalPoundPrice: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
     label: {
       type: String,
       required: true,
@@ -130,6 +140,8 @@ const productSchema = new mongoose.Schema(
         product.id = product._id;
         delete product._id;
         if (product.originalPrice === undefined) delete product.originalPrice;
+        if (product.poundPrice === undefined) delete product.poundPrice;
+        if (product.originalPoundPrice === undefined) delete product.originalPoundPrice;
         return product;
       },
     },

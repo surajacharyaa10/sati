@@ -24,6 +24,16 @@ const orderItemSchema = new mongoose.Schema(
       default: undefined,
       min: 0,
     },
+    poundPrice: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
+    originalPoundPrice: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
     image: {
       type: String,
       required: true,
@@ -78,6 +88,20 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    subtotalPound: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
+    totalSavingsPound: {
+      type: Number,
+      default: undefined,
+      min: 0,
+    },
+    currency: {
+      type: String,
+      default: 'NPR',
     },
     address: {
       type: String,

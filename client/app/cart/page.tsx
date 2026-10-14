@@ -10,15 +10,26 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCart } from "@/app/components/cart-provider"
 import { useAuth } from "@/app/components/auth-provider"
-import { formatRupees } from "@/lib/currency"
+import { formatRupees, formatPounds } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
+import { useCurrency } from "@/lib/currency-context"
 
 export default function CartPage() {
   const { items, itemCount, hasLoaded, setQuantity, removeItem } = useCart()
   const { isAuthenticated } = useAuth()
+  const { currency, format, getPriceInfo } = useCurrency()
   const router = useRouter()
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const totalSavings = items.reduce((sum, item) => sum + Math.max((item.originalPrice ?? item.price) - item.price, 0) * item.quantity, 0)
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + (currency === "GBP" && item.poundPrice != null ? item.poundPrice : item.price) * item.quantity,
+    0
+  )
+  const totalSavings = items.reduce((sum, item) => {
+    const isPound = currency === "GBP" && item.poundPrice != null
+    const p = isPound ? item.poundPrice! : item.price
+    const orig = (isPound ? item.originalPoundPrice : item.originalPrice) ?? p
+    return sum + Math.max(orig - p, 0) * item.quantity
+  }, 0)
 
   if (!isAuthenticated) {
     return (
@@ -104,19 +115,29 @@ export default function CartPage() {
                       </div>
 
                       <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
-                        <div className="text-right">
-                          {item.originalPrice && (
-                            <del className="block text-[12px] text-[#8b867e]">{formatRupees(item.originalPrice * item.quantity)}</del>
-                          )}
-                          <p className={`text-sm font-semibold ${item.originalPrice ? "text-[#e94717]" : ""}`}>
-                            {formatRupees(item.price * item.quantity)}
-                          </p>
-                          {getDiscountPercentage(item.originalPrice, item.price) > 0 && (
-                            <p className="mt-1 text-[11px] font-bold uppercase text-[#c43d17]">
-                              {getDiscountPercentage(item.originalPrice, item.price)}% off
-                            </p>
-                          )}
-                        </div>
+                        {(() => {
+                          const pInfo = getPriceInfo(item)
+                          const isPound = pInfo.currency === "GBP"
+                          const linePrice = pInfo.price * item.quantity
+                          const origLinePrice = pInfo.originalPrice ? pInfo.originalPrice * item.quantity : undefined
+                          return (
+                            <div className="text-right">
+                              {origLinePrice && (
+                                <del className="block text-[12px] text-[#8b867e]">
+                                  {isPound ? formatPounds(origLinePrice) : formatRupees(origLinePrice)}
+                                </del>
+                              )}
+                              <p className={`text-sm font-semibold ${pInfo.hasDiscount ? "text-[#e94717]" : ""}`}>
+                                {isPound ? formatPounds(linePrice) : formatRupees(linePrice)}
+                              </p>
+                              {pInfo.discountPercentage > 0 && (
+                                <p className="mt-1 text-[11px] font-bold uppercase text-[#c43d17]">
+                                  {pInfo.discountPercentage}% off
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })()}
                         <div className="inline-flex h-9 items-center rounded-full border border-black/15">
                           <Button
                             type="button"
@@ -153,12 +174,12 @@ export default function CartPage() {
                 <CardContent className="space-y-4 px-5 py-5">
                   <div className="flex justify-between text-xs">
                     <span className="text-[#706c66]">Subtotal</span>
-                    <span className="font-semibold">{formatRupees(subtotal)}</span>
+                    <span className="font-semibold">{format(subtotal)}</span>
                   </div>
                   {totalSavings > 0 && (
                     <div className="flex justify-between text-xs text-[#c43d17]">
                       <span>You save</span>
-                      <span className="font-semibold">−{formatRupees(totalSavings)}</span>
+                      <span className="font-semibold">−{format(totalSavings)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs">
@@ -167,7 +188,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex justify-between border-t border-black/10 pt-4 text-sm font-semibold">
                     <span>Estimated total</span>
-                    <span>{formatRupees(subtotal)}</span>
+                    <span>{format(subtotal)}</span>
                   </div>
                   <Button
                     type="button"

@@ -195,7 +195,7 @@ export function ProductsManagement({
                 <TableHead>Product ID / Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Audience</TableHead>
-                <TableHead>Price (₹)</TableHead>
+                <TableHead>Price (Rs / £)</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Label</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -232,7 +232,22 @@ export function ProductsManagement({
                             className="h-8 w-24 text-xs"
                           />
                         ) : (
-                          <span className="font-semibold">₹{p.price}</span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-foreground">Rs {p.price}</span>
+                              {p.originalPrice ? (
+                                <span className="text-[11px] text-muted-foreground line-through">Rs {p.originalPrice}</span>
+                              ) : null}
+                            </div>
+                            {p.poundPrice != null ? (
+                              <div className="flex items-center gap-1.5 text-xs text-amber-500 font-medium">
+                                <span>£{p.poundPrice}</span>
+                                {p.originalPoundPrice ? (
+                                  <span className="text-[11px] text-muted-foreground line-through">£{p.originalPoundPrice}</span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>

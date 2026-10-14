@@ -36,6 +36,25 @@ const userSchema = new mongoose.Schema(
 			enum: ['customer', 'admin'],
 			default: 'customer',
 		},
+		country: {
+			type: String,
+			enum: ['Nepal', 'UK'],
+			default: 'Nepal',
+		},
+		phoneNumber: {
+			type: String,
+			default: '',
+			trim: true,
+		},
+		currency: {
+			type: String,
+			enum: ['NPR', 'GBP'],
+			default: 'NPR',
+		},
+		isVerified: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	{
 		timestamps: true,

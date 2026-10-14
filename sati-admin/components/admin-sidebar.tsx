@@ -11,6 +11,7 @@ import {
   FileText,
   Bell,
   MessageSquare,
+  Share2,
 } from "lucide-react"
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const items: NavItem[] = [
   { id: "orders",        title: "Orders",           icon: ShoppingBag },
   { id: "customers",     title: "Customers",        icon: Users },
   { id: "liveChat",      title: "Live Chat",         icon: MessageSquare },
+  { id: "contact",       title: "Contact & Social", icon: Share2 },
   { id: "journal",       title: "Journal",          icon: FileText },
   { id: "notifications", title: "Notifications",    icon: Bell },
 ]

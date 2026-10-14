@@ -26,6 +26,7 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
         const p = await Product.findOne({ _id: productId, active: true });
         if (p) {
           const qty = Math.max(1, Number(quantity) || 1);
+          const hasPound = p.poundPrice != null;
           const order = await Order.create({
             user,
             items: [{
@@ -33,6 +34,8 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
               name: p.name,
               price: p.price,
               originalPrice: p.originalPrice ?? undefined,
+              poundPrice: p.poundPrice ?? undefined,
+              originalPoundPrice: p.originalPoundPrice ?? undefined,
               image: p.image,
               alt: p.alt || '',
               size: size || undefined,
@@ -41,6 +44,11 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
             }],
             subtotal: p.price * qty,
             totalSavings: Math.max((p.originalPrice ?? p.price) - p.price, 0) * qty,
+            ...(hasPound ? {
+              subtotalPound: p.poundPrice * qty,
+              totalSavingsPound: Math.max((p.originalPoundPrice ?? p.poundPrice) - p.poundPrice, 0) * qty,
+            } : {}),
+            currency: req.body.currency ? String(req.body.currency).toUpperCase() : 'NPR',
             address: req.body.address || '',
             phoneNumber: req.body.phoneNumber || '',
           });
@@ -55,7 +63,12 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
     if (!orderId) {
       try {
         if (req.authUserId) {
-          const cartOrder = await createOrderFromCart(req.authUserId, req.body.address, req.body.phoneNumber);
+          const cartOrder = await createOrderFromCart(
+            req.authUserId,
+            req.body.address,
+            req.body.phoneNumber,
+            req.body.currency ? String(req.body.currency).toUpperCase() : 'NPR'
+          );
           if (cartOrder) {
             orderId = cartOrder._id.toString();
           }
@@ -72,6 +85,9 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
           productId: String(prod.productId || `prod_${idx}`),
           name: prod.name || prod.dish || 'Product',
           price: Number(prod.price) || 0,
+          originalPrice: prod.originalPrice != null ? Number(prod.originalPrice) : undefined,
+          poundPrice: prod.poundPrice != null ? Number(prod.poundPrice) : undefined,
+          originalPoundPrice: prod.originalPoundPrice != null ? Number(prod.originalPoundPrice) : undefined,
           image: prod.image || prod.imgdata || '',
           alt: prod.alt || '',
           quantity: Number(prod.quantity || prod.qnty || 1),
@@ -82,6 +98,7 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
           items,
           subtotal,
           totalSavings: 0,
+          currency: req.body.currency ? String(req.body.currency).toUpperCase() : 'NPR',
           address: req.body.address || '',
           phoneNumber: req.body.phoneNumber || '',
         });
@@ -91,7 +108,13 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
       }
     }
 
-    const session = await createCheckoutSession(products, orderId, req.body.address || '', req.body.phoneNumber || '');
+    const session = await createCheckoutSession(
+      products,
+      orderId,
+      req.body.address || '',
+      req.body.phoneNumber || '',
+      req.body.currency || 'usd'
+    );
     return res.json({ ...session, orderId });
   } catch (error) {
     console.error('Stripe checkout error:', error.message);

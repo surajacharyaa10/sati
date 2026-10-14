@@ -29,6 +29,7 @@ import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
+import { useCurrency } from "@/lib/currency-context"
 import { reviewsApi, type ProductReview } from "@/lib/api"
 
 const swatchColors: Record<string, string> = {
@@ -77,6 +78,8 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
   const { addItem } = useCart()
   const wishlist = useWishlist()
   const { user, isAuthenticated } = useAuth()
+  const { currency, getPriceInfo } = useCurrency()
+  const priceInfo = getPriceInfo(product)
   const [selectedColor, setSelectedColor] = useState(product.colors[0])
   const [selectedSize, setSelectedSize] = useState("M")
   const [isAdded, setIsAdded] = useState(false)
@@ -220,6 +223,8 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
+      poundPrice: product.poundPrice,
+      originalPoundPrice: product.originalPoundPrice,
       image: activeImage.url || product.image,
       alt: activeImage.alt || product.alt,
       color: selectedColor,
@@ -381,15 +386,25 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
           </a>
 
           <div className="mt-5">
-            <p className={`text-3xl font-semibold ${product.originalPrice ? "text-[#e94717]" : "text-[#171512]"}`}>
-              {formatRupees(product.price)}
-            </p>
-            {product.originalPrice && (
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p className={`text-3xl font-semibold ${priceInfo.hasDiscount ? "text-[#e94717]" : "text-[#171512]"}`}>
+                {priceInfo.formattedPrice}
+              </p>
+              {priceInfo.secondaryPrice && (
+                <span className="text-sm font-medium text-[#8b867e]">
+                  ({priceInfo.secondaryPrice.formattedPrice}
+                  {priceInfo.secondaryPrice.formattedOriginalPrice
+                    ? ` · was ${priceInfo.secondaryPrice.formattedOriginalPrice}`
+                    : ""})
+                </span>
+              )}
+            </div>
+            {priceInfo.formattedOriginalPrice && (
               <div className="mt-1 flex items-center gap-2 text-xs">
-                <del className="text-[#8b867e]">{formatRupees(product.originalPrice)}</del>
-                {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
-                  <span className="font-semibold text-[#706c66]">
-                    -{getDiscountPercentage(product.originalPrice, product.price)}%
+                <del className="text-[#8b867e]">{priceInfo.formattedOriginalPrice}</del>
+                {priceInfo.discountPercentage > 0 && (
+                  <span className="rounded-sm bg-[#fae5dd] px-1.5 py-0.5 text-[11px] font-bold text-[#c43d17]">
+                    -{priceInfo.discountPercentage}%
                   </span>
                 )}
               </div>
@@ -469,7 +484,7 @@ export function ProductDetails({ product }: { product: StoreProduct }) {
 
           <div className="mt-7 grid gap-3 border-y border-black/10 py-4 text-[12px] text-[#706c66] sm:grid-cols-2">
             <p className="flex items-center gap-2">
-              <Truck aria-hidden="true" className="size-4 text-[#e94717]" /> Free shipping over {formatRupees(120)}
+              <Truck aria-hidden="true" className="size-4 text-[#e94717]" /> Free shipping over {currency === "GBP" ? "£20" : formatRupees(120)}
             </p>
             <p className="flex items-center gap-2">
               <ShieldCheck aria-hidden="true" className="size-4 text-[#e94717]" /> Easy 30-day returns

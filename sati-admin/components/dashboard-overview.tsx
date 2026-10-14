@@ -3,35 +3,64 @@
 import {
   Package,
   ShoppingBag,
-  IndianRupee,
+  Banknote,
+  Coins,
+  ArrowLeftRight,
   Users,
   TrendingUp,
-  ArrowUpRight,
-  ShieldAlert,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { AdminSummary } from "@/lib/admin-api"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { useExchangeRate, getDualAmount, formatPound, formatRupee } from "@/lib/currency"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 
 const chartConfig = {
-  revenue: { label: "Revenue (₹)", color: "#e94717" },
+  revenue: { label: "Revenue (Rs)", color: "#e94717" },
 }
 
 export function DashboardOverview({ summary }: { summary: AdminSummary | null }) {
+  const { rate } = useExchangeRate()
+
   if (!summary) {
     return <div className="p-8 text-sm text-muted-foreground">Loading dashboard analytics…</div>
   }
 
+  // Combined overall revenue dynamically converted using market exchange rate
+  // If order was GBP, convert to NPR; if NPR, convert to GBP
+  const poundRev = summary.revenuePound ?? 0
+  const poundSavings = summary.savingsPound ?? 0
+  const nprRev = summary.revenue ?? 0
+  const nprSavings = summary.savings ?? 0
+
+  // Total equivalent converted using live market rate
+  const totalCombinedNpr = nprRev + (poundRev * rate)
+  const totalCombinedGbp = poundRev + (rate > 0 ? nprRev / rate : 0)
+
   const statCards = [
     {
-      title: "Total Revenue",
-      value: `₹${summary.revenue.toLocaleString("en-IN")}`,
-      desc: `Customer savings: ₹${summary.savings.toLocaleString("en-IN")}`,
-      icon: IndianRupee,
+      title: "Total Revenue (Rs)",
+      value: `Rs ${Math.round(nprRev).toLocaleString("en-NP")}`,
+      desc: `Customer savings: Rs ${Math.round(nprSavings).toLocaleString("en-NP")}`,
+      icon: Banknote,
       trend: "+12.4% from last month",
+    },
+    {
+      title: "Total Revenue (£ / GBP)",
+      value: `£${poundRev.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+      desc: `Customer savings: £${poundSavings.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+      icon: Coins,
+      trend: "Pound direct settlements",
+    },
+    {
+      title: "Overall Revenue (Dual)",
+      isDual: true,
+      topValue: `£${totalCombinedGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      downValue: `Rs ${Math.round(totalCombinedNpr).toLocaleString("en-NP")}`,
+      desc: `Live Market: 1 GBP ≈ Rs ${rate.toFixed(2)}`,
+      icon: ArrowLeftRight,
+      trend: "Combined dynamic total",
     },
     {
       title: "Active Orders",
@@ -65,8 +94,8 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
 
   return (
     <div className="space-y-8">
-      {/* Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics Row - 6 Cards in 2 rows of 3 or responsive */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statCards.map((card) => {
           const Icon = card.icon
           return (
@@ -80,7 +109,18 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="font-serif text-3xl font-medium tracking-tight text-foreground">{card.value}</div>
+                {card.isDual ? (
+                  <div className="space-y-0.5">
+                    <div className="font-serif text-2xl font-bold tracking-tight text-foreground">
+                      {card.topValue}
+                    </div>
+                    <div className="text-sm font-semibold text-[#e94717]">
+                      {card.downValue}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="font-serif text-3xl font-medium tracking-tight text-foreground">{card.value}</div>
+                )}
                 <p className="mt-1 text-xs text-muted-foreground">{card.desc}</p>
                 <div className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                   <TrendingUp className="size-3" />
@@ -111,7 +151,7 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
                   <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#171512", borderRadius: "8px", color: "#fff", border: "none" }}
-                    formatter={(value: unknown) => [`₹${Number(value ?? 0).toLocaleString("en-IN")}`, "Revenue"]}
+                    formatter={(value: unknown) => [`Rs ${Number(value ?? 0).toLocaleString("en-NP")}`, "Revenue"]}
                   />
                   <Bar dataKey="revenue" fill="#e94717" radius={[6, 6, 0, 0]} />
                 </BarChart>
@@ -142,7 +182,7 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
                       </div>
                     </div>
                     <div className="text-right font-semibold text-sm text-foreground">
-                      ₹{p.revenue.toLocaleString("en-IN")}
+                      Rs {p.revenue.toLocaleString("en-NP")}
                     </div>
                   </div>
                 ))
@@ -179,16 +219,30 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
                   </TableCell>
                 </TableRow>
               ) : (
-                summary.recentOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs font-semibold">{order.id.slice(-8)}</TableCell>
-                    <TableCell>
-                      <div className="text-xs font-medium">
-                        {order.items.length} {order.items.length === 1 ? "item" : "items"} ({order.items[0]?.name}
-                        {order.items.length > 1 ? ` +${order.items.length - 1}` : ""})
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold">₹{order.subtotal.toLocaleString("en-IN")}</TableCell>
+                summary.recentOrders.map((order) => {
+                  const dual = getDualAmount(
+                    {
+                      gbp: order.currency === "GBP" ? (order.subtotalPound ?? order.subtotal) : order.subtotalPound,
+                      npr: order.currency === "GBP" ? null : order.subtotal,
+                    },
+                    rate,
+                  )
+
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-xs font-semibold">{order.id.slice(-8)}</TableCell>
+                      <TableCell>
+                        <div className="text-xs font-medium">
+                          {order.items.length} {order.items.length === 1 ? "item" : "items"} ({order.items[0]?.name}
+                          {order.items.length > 1 ? ` +${order.items.length - 1}` : ""})
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        <div className="flex flex-col text-xs leading-tight">
+                          <span className="font-bold text-foreground">{dual.gbpFormatted}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium">{dual.nprFormatted}</span>
+                        </div>
+                      </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -201,11 +255,12 @@ export function DashboardOverview({ summary }: { summary: AdminSummary | null })
                         {order.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))
+                      <TableCell className="text-right text-xs text-muted-foreground">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

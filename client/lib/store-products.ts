@@ -27,6 +27,8 @@ export type StoreProduct = {
   reviewCount: number
   price: number
   originalPrice?: number
+  poundPrice?: number
+  originalPoundPrice?: number
   label: ProductBadgeLabel
   image: string
   alt: string

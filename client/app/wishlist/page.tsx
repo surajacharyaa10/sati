@@ -15,11 +15,13 @@ import { useWishlist } from "@/lib/wishlist-store"
 import { useAuth } from "@/app/components/auth-provider"
 import { formatRupees } from "@/lib/currency"
 import { getDiscountPercentage } from "@/lib/pricing"
+import { useCurrency } from "@/lib/currency-context"
 
 export default function WishlistPage() {
   const { productIds, hasLoaded, remove } = useWishlist()
   const { products } = useProducts()
   const { isAuthenticated } = useAuth()
+  const { getPriceInfo } = useCurrency()
   const router = useRouter()
   const wishlistProducts = products.filter((product) => productIds.includes(product.id))
 
@@ -129,15 +131,24 @@ export default function WishlistPage() {
                     <CardTitle className="text-xs font-semibold sm:text-sm">
                       <Link href={`/product/${product.id}`} className="hover:text-[#e94717]">{product.name}</Link>
                     </CardTitle>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {product.originalPrice && <del className="text-[12px] text-[#8b867e]">{formatRupees(product.originalPrice)}</del>}
-                      <p className={`text-xs font-semibold ${product.originalPrice ? "text-[#e94717]" : ""}`}>{formatRupees(product.price)}</p>
-                      {getDiscountPercentage(product.originalPrice, product.price) > 0 && (
-                        <span className="rounded-sm bg-[#fae5dd] px-1.5 py-0.5 text-[10px] font-bold text-[#c43d17]">
-                          {getDiscountPercentage(product.originalPrice, product.price)}% off
-                        </span>
-                      )}
-                    </div>
+                    {(() => {
+                      const priceInfo = getPriceInfo(product)
+                      return (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {priceInfo.formattedOriginalPrice && (
+                            <del className="text-[12px] text-[#8b867e]">{priceInfo.formattedOriginalPrice}</del>
+                          )}
+                          <p className={`text-xs font-semibold ${priceInfo.hasDiscount ? "text-[#e94717]" : ""}`}>
+                            {priceInfo.formattedPrice}
+                          </p>
+                          {priceInfo.discountPercentage > 0 && (
+                            <span className="rounded-sm bg-[#fae5dd] px-1.5 py-0.5 text-[10px] font-bold text-[#c43d17]">
+                              {priceInfo.discountPercentage}% off
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
                     <CardDescription className="col-span-2 text-[12px] text-[#817c75]">{product.details}</CardDescription>
                     <div className="col-span-2 pt-2"><AddToBagButton product={product} /></div>
                   </CardHeader>

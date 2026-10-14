@@ -157,12 +157,11 @@ export default function AccountPage() {
 
     setName(user.name)
     setEmail(user.email)
+    // Load phone from DB first, fall back to localStorage
+    setPhone((user as { phoneNumber?: string }).phoneNumber || '')
 
     // Load persisted local profile details
     try {
-      const storedPhone = localStorage.getItem(`sati_profile_phone_${user.id}`)
-      if (storedPhone) setPhone(storedPhone)
-
       const storedBizType = localStorage.getItem(`sati_profile_biz_${user.id}`)
       if (storedBizType) setBusinessType(storedBizType)
 
@@ -218,12 +217,12 @@ export default function AccountPage() {
         const { user: updatedUser } = await authApi.updateProfile({
           name: name.trim(),
           email: email.trim(),
+          phoneNumber: phone.trim(),
           ...(photo ? { photo } : {}),
           ...(removePhoto ? { removePhoto: true } : {}),
         })
 
-        // Save supplementary profile attributes
-        localStorage.setItem(`sati_profile_phone_${user.id}`, phone.trim())
+        // Save supplementary profile attributes (non-DB fields)
         localStorage.setItem(`sati_profile_biz_${user.id}`, businessType.trim())
         localStorage.setItem(`sati_profile_company_${user.id}`, (companyName || name).trim())
         localStorage.setItem(`sati_profile_address_${user.id}`, address.trim())
@@ -231,6 +230,7 @@ export default function AccountPage() {
         await refresh()
         setName(updatedUser.name)
         setEmail(updatedUser.email)
+        setPhone((updatedUser as { phoneNumber?: string }).phoneNumber || phone.trim())
         clearPhotoPreview()
         setPhoto(undefined)
         setRemovePhoto(false)

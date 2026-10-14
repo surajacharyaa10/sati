@@ -28,7 +28,8 @@ import { Footer } from "@/app/components/footer"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/app/components/cart-provider"
 import { useAuth } from "@/app/components/auth-provider"
-import { formatRupees } from "@/lib/currency"
+import { formatRupees, formatPrice, formatPounds } from "@/lib/currency"
+import { useCurrency } from "@/lib/currency-context"
 import { paymentApi, apiRequest, apiBaseUrl, type EsewaConfig } from "@/lib/api"
 import type { StoreProduct } from "@/lib/store-products"
 
@@ -70,25 +71,32 @@ function submitEsewaForm(config: EsewaConfig) {
 function PaymentMethodButton({
   id,
   selected,
+  disabled,
   onClick,
   logo,
   label,
   description,
+  badge,
 }: {
   id: string
   selected: boolean
+  disabled?: boolean
   onClick: () => void
   logo: React.ReactNode
   label: string
   description: string
+  badge?: string
 }) {
   return (
     <button
       id={id}
       type="button"
+      disabled={disabled}
       onClick={onClick}
       className={`w-full text-left rounded-xl border-2 px-5 py-4 transition-all duration-200 ${
-        selected
+        disabled
+          ? "border-black/5 bg-[#faf8f5] opacity-50 cursor-not-allowed"
+          : selected
           ? "border-[#171512] bg-[#171512]/5 shadow-sm"
           : "border-black/10 bg-white hover:border-black/25 hover:bg-[#f7f3eb]/50"
       }`}
@@ -96,18 +104,25 @@ function PaymentMethodButton({
       <div className="flex items-center gap-4">
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold transition-colors ${
-            selected ? "bg-[#171512]" : "bg-black/15"
+            disabled ? "bg-black/10 text-[#8e8a83]" : selected ? "bg-[#171512]" : "bg-black/15"
           }`}
         >
           {logo}
         </div>
-        <div className="min-w-0">
-          <p className={`text-sm font-semibold ${selected ? "text-[#171512]" : "text-[#3a3631]"}`}>{label}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className={`text-sm font-semibold ${selected ? "text-[#171512]" : "text-[#3a3631]"}`}>{label}</p>
+            {badge && (
+              <span className="rounded bg-black/5 px-1.5 py-0.5 text-[9px] font-semibold text-[#706c66] uppercase">
+                {badge}
+              </span>
+            )}
+          </div>
           <p className="mt-0.5 text-[11px] text-[#9a958e] leading-snug">{description}</p>
         </div>
         <div
           className={`ml-auto h-4 w-4 shrink-0 rounded-full border-2 transition-all ${
-            selected ? "border-[#171512] bg-[#171512]" : "border-black/20"
+            disabled ? "border-black/10" : selected ? "border-[#171512] bg-[#171512]" : "border-black/20"
           }`}
         >
           {selected && (
@@ -179,17 +194,36 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { currency: storeCurrency, setCurrency } = useCurrency()
+
   // Prefill user details if signed in
   useEffect(() => {
     if (user) {
       if (user.name && !fullName) setFullName(user.name)
       if (user.email && !emailAddress) setEmailAddress(user.email)
+      if (user.phoneNumber && !phoneNumber) setPhoneNumber(user.phoneNumber)
+      if (user.country === "UK") {
+        setCountry("United Kingdom")
+        setRegion(REGIONS_BY_COUNTRY["United Kingdom"][0])
+        setCurrency("GBP")
+        setMethod("stripe")
+      } else if (user.country === "Nepal") {
+        setCountry("Nepal")
+        setRegion(REGIONS_BY_COUNTRY["Nepal"][0])
+        setCurrency("NPR")
+      }
     }
   }, [user])
 
   function handleCountryChange(newCountry: "Nepal" | "United Kingdom") {
     setCountry(newCountry)
     setRegion(REGIONS_BY_COUNTRY[newCountry][0])
+    if (newCountry === "United Kingdom") {
+      setCurrency("GBP")
+      setMethod("stripe")
+    } else {
+      setCurrency("NPR")
+    }
   }
 
   function handleSaveAddress() {
@@ -227,6 +261,9 @@ function CheckoutContent() {
     }
   }, [isBuyNow, directProductId])
 
+  const isUk = country === "United Kingdom" || storeCurrency === "GBP"
+  const currentCurrency = isUk ? "GBP" : "NPR"
+
   // Determine active items: either single product or user's bag
   const activeItems = isBuyNow
     ? directProduct
@@ -236,6 +273,8 @@ function CheckoutContent() {
             name: directProduct.name,
             price: directProduct.price,
             originalPrice: directProduct.originalPrice,
+            poundPrice: directProduct.poundPrice,
+            originalPoundPrice: directProduct.originalPoundPrice,
             image: directProduct.image,
             alt: directProduct.alt,
             size: directSize,
@@ -247,11 +286,16 @@ function CheckoutContent() {
     : cartItems
 
   const totalItemCount = isBuyNow ? (directProduct ? directQuantity : 0) : cartItemCount
-  const subtotal = activeItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const totalSavings = activeItems.reduce(
-    (sum, item) => sum + Math.max((item.originalPrice ?? item.price) - item.price, 0) * item.quantity,
-    0,
+  const subtotal = activeItems.reduce(
+    (sum, item) => sum + (isUk && item.poundPrice != null ? item.poundPrice : item.price) * item.quantity,
+    0
   )
+  const totalSavings = activeItems.reduce((sum, item) => {
+    const isPound = isUk && item.poundPrice != null
+    const p = isPound ? item.poundPrice! : item.price
+    const orig = (isPound ? item.originalPoundPrice : item.originalPrice) ?? p
+    return sum + Math.max(orig - p, 0) * item.quantity
+  }, 0)
 
   const isDataReady = isBuyNow ? !directLoading : cartHasLoaded
 
@@ -337,12 +381,14 @@ function CheckoutContent() {
       if (isBuyNow && directProduct) {
         // ─── BUY NOW DIRECT PURCHASE (Cart is untouched) ───
         if (method === "stripe") {
+          const unitPrice = isUk && directProduct.poundPrice != null ? directProduct.poundPrice : directProduct.price
           const products = [
             {
               name: directProduct.name,
               image: directProduct.image,
-              price: directProduct.price,
+              price: unitPrice,
               quantity: directQuantity,
+              poundPrice: directProduct.poundPrice,
             },
           ]
           const { url } = await paymentApi.stripeCheckout(
@@ -354,10 +400,14 @@ function CheckoutContent() {
               color: directColor,
             },
             fullAddress,
-            cleanPhone
+            cleanPhone,
+            isUk ? "gbp" : "npr"
           )
           window.location.href = url
         } else {
+          if (isUk) {
+            throw new Error("eSewa is only available in Nepal (NPR). Please use Stripe (Card) for UK orders.")
+          }
           // eSewa single product direct initialization
           const result = await paymentApi.esewaInitItem({
             productId: directProduct.id,
@@ -379,17 +429,22 @@ function CheckoutContent() {
           const products = cartItems.map((item) => ({
             name: item.name,
             image: item.image,
-            price: item.price,
+            price: isUk && item.poundPrice != null ? item.poundPrice : item.price,
             quantity: item.quantity,
+            poundPrice: item.poundPrice,
           }))
           const { url } = await paymentApi.stripeCheckout(
             products,
             undefined,
             fullAddress,
-            cleanPhone
+            cleanPhone,
+            isUk ? "gbp" : "npr"
           )
           window.location.href = url
         } else {
+          if (isUk) {
+            throw new Error("eSewa is only available in Nepal (NPR). Please use Stripe (Card) for UK orders.")
+          }
           const result = await paymentApi.esewaInitCart(fullAddress, cleanPhone)
           if (!result.success) {
             throw new Error("Failed to initialize eSewa payment")
@@ -757,12 +812,16 @@ function CheckoutContent() {
                   onClick={() => setMethod("stripe")}
                   logo={<CreditCard className="size-5" />}
                   label="Pay with Card"
-                  description="Visa, Mastercard, Amex · Stripe"
+                  description={isUk ? "Visa, Mastercard, Amex · Charged in GBP (£)" : "Visa, Mastercard, Amex · Stripe"}
+                  badge={isUk ? "GBP (£)" : "NPR"}
                 />
                 <PaymentMethodButton
                   id="payment-method-esewa"
                   selected={method === "esewa"}
-                  onClick={() => setMethod("esewa")}
+                  disabled={isUk}
+                  onClick={() => {
+                    if (!isUk) setMethod("esewa")
+                  }}
                   logo={
                     <div className="relative h-6 w-6 overflow-hidden rounded-full bg-white p-0.5">
                       <Image
@@ -775,7 +834,8 @@ function CheckoutContent() {
                     </div>
                   }
                   label="Pay with eSewa"
-                  description="Nepal's trusted digital wallet"
+                  description={isUk ? "eSewa is only available in Nepal (NPR)" : "Nepal's trusted digital wallet"}
+                  badge={isUk ? "Nepal Only" : "NPR"}
                 />
               </div>
 
@@ -783,7 +843,7 @@ function CheckoutContent() {
               {method === "stripe" && (
                 <div className="rounded-lg border border-black/8 bg-[#f7f3eb] p-3 text-xs space-y-1.5">
                   <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">
-                    <ShieldCheck className="size-3.5" /> Secured by Stripe
+                    <ShieldCheck className="size-3.5" /> Secured by Stripe · {isUk ? "GBP (£) Checkout" : "NPR Checkout"}
                   </div>
                   <p className="text-[11px] text-[#706c66]">
                     Redirected to Stripe hosted checkout. Card details never touch our servers.
@@ -794,7 +854,7 @@ function CheckoutContent() {
               {method === "esewa" && (
                 <div className="rounded-lg border border-black/8 bg-[#f0faf4] p-3 text-xs space-y-1.5">
                   <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">
-                    <ShieldCheck className="size-3.5" /> Secured by eSewa
+                    <ShieldCheck className="size-3.5" /> Secured by eSewa (Nepal NPR)
                   </div>
                   <p className="text-[11px] text-[#706c66]">
                     Redirected to eSewa gateway. Official printable receipt generated on completion.
@@ -844,7 +904,10 @@ function CheckoutContent() {
                             <p className="mt-0.5 text-[10px] text-[#8e8a83]">Qty {item.quantity}</p>
                           </div>
                           <p className="shrink-0 text-xs font-semibold">
-                            {formatRupees(item.price * item.quantity)}
+                            {formatPrice(
+                              (isUk && item.poundPrice != null ? item.poundPrice : item.price) * item.quantity,
+                              currentCurrency
+                            )}
                           </p>
                         </div>
                       </div>
@@ -855,12 +918,12 @@ function CheckoutContent() {
               <div className="space-y-2.5 border-t border-black/8 pt-3 text-xs">
                 <div className="flex justify-between text-[#706c66]">
                   <span>Items Total ({totalItemCount} {totalItemCount === 1 ? "Item" : "Items"})</span>
-                  <span className="font-semibold text-[#171512]">{formatRupees(subtotal)}</span>
+                  <span className="font-semibold text-[#171512]">{formatPrice(subtotal, currentCurrency)}</span>
                 </div>
                 {totalSavings > 0 && (
                   <div className="flex justify-between text-[#c43d17]">
                     <span>Discount Savings</span>
-                    <span className="font-semibold">−{formatRupees(totalSavings)}</span>
+                    <span className="font-semibold">−{formatPrice(totalSavings, currentCurrency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-[#706c66]">
@@ -869,7 +932,7 @@ function CheckoutContent() {
                 </div>
                 <div className="flex justify-between border-t border-black/8 pt-3 text-sm font-bold text-[#171512]">
                   <span>Total</span>
-                  <span className="text-[#e94717]">{formatRupees(subtotal)}</span>
+                  <span className="text-[#e94717]">{formatPrice(subtotal, currentCurrency)}</span>
                 </div>
               </div>
 
@@ -897,7 +960,7 @@ function CheckoutContent() {
                 ) : (
                   <span className="flex items-center gap-2">
                     <Lock className="size-3.5" />
-                    Proceed to Pay · {formatRupees(subtotal)}
+                    Proceed to Pay · {formatPrice(subtotal, currentCurrency)}
                   </span>
                 )}
               </Button>
