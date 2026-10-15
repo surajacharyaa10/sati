@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { toast } from "sonner"
 import {
   Phone,
   Mail,
@@ -169,7 +170,7 @@ export function ContactManagement() {
       const updated = await adminApi.contact.messages.updateStatus(id, status)
       setMessages((prev) => prev.map((m) => (m._id === id ? updated : m)))
     } catch (err) {
-      alert("Failed to update status: " + (err instanceof Error ? err.message : "Error"))
+      toast.error("Failed to update status: " + (err instanceof Error ? err.message : "Error"))
     }
   }
 
@@ -179,7 +180,7 @@ export function ContactManagement() {
       await adminApi.contact.messages.remove(id)
       setMessages((prev) => prev.filter((m) => m._id !== id))
     } catch (err) {
-      alert("Failed to delete message: " + (err instanceof Error ? err.message : "Error"))
+      toast.error("Failed to delete message: " + (err instanceof Error ? err.message : "Error"))
     }
   }
 

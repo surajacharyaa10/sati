@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import {
   MessageSquare,
   Send,
@@ -225,7 +226,7 @@ function ChatThread({
       const nextStatus = session.status === "active" ? "closed" : "active"
       await onStatusChange(session._id, nextStatus)
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update chat status")
+      toast.error(err instanceof Error ? err.message : "Failed to update chat status")
     } finally {
       setStatusChanging(false)
     }

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import {
   Package,
   ChevronDown,
@@ -362,7 +363,7 @@ export function OrdersManagement({ orders }: { orders: Order[] }) {
       )
     } catch (err) {
       console.error("Failed to update order status:", err)
-      alert(err instanceof Error ? err.message : "Failed to update status")
+      toast.error(err instanceof Error ? err.message : "Failed to update status")
     } finally {
       setUpdating(null)
     }

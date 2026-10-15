@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import {
   MessageSquare,
   Search,
@@ -180,7 +181,7 @@ export function InquiriesManagement() {
       const updated = await adminApi.inquiries.updateStatus(id, status)
       setInquiries((prev) => prev.map((i) => i._id === id ? updated : i))
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status")
+      toast.error(err instanceof Error ? err.message : "Failed to update status")
     }
   }
 
@@ -190,7 +191,7 @@ export function InquiriesManagement() {
       setInquiries((prev) => prev.filter((i) => i._id !== id))
       setTotal((t) => t - 1)
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : "Failed to delete")
     }
   }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Search, Plus, Trash2, Edit3, Check, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -139,7 +140,7 @@ export function ProductsManagement({
       await adminApi.products.delete(id)
       onUpdate()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : "Failed to delete")
     }
   }
 
