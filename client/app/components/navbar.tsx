@@ -108,20 +108,20 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Shipping announcement */}
-      <div className="relative flex min-h-9 items-center justify-center bg-[#e94717] px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.12em] text-white sm:text-sm">
+      <div className="relative flex min-h-9 items-center justify-center overflow-hidden bg-[#e94717] px-3 py-2 pr-14 text-center text-xs font-bold uppercase tracking-[0.12em] text-white sm:pr-16 sm:text-sm">
         <span>
           Free shipping on orders over {currency === "GBP" ? "£20" : formatRupees(120)} — easy returns within 30 days
         </span>
-{user?.country === 'UK' ? (
-          <span className="sm:absolute sm:right-6 ml-3 text-white font-black underline underline-offset-2">£</span>
+        {user?.country === 'UK' ? (
+          <span className="absolute right-4 text-white font-black underline underline-offset-2 sm:right-6">£</span>
         ) : user?.country === 'Nepal' ? (
-          <span className="sm:absolute sm:right-6 ml-3 text-white font-black underline underline-offset-2">Rs</span>
+          <span className="absolute right-4 text-white font-black underline underline-offset-2 sm:right-6">Rs</span>
         ) : (
           <button
             type="button"
             onClick={toggleCurrency}
             aria-label={`Switch currency. Current: ${currency}`}
-            className="sm:absolute sm:right-6 ml-3 inline-flex items-center gap-1 rounded-full bg-black/20 hover:bg-black/35 px-2.5 py-0.5 text-[11px] font-bold text-white transition tracking-normal border border-white/20"
+            className="absolute right-2 inline-flex items-center gap-1 rounded-full bg-black/20 hover:bg-black/35 px-2.5 py-0.5 text-[11px] font-bold text-white transition tracking-normal border border-white/20 sm:right-6"
             title={`Switch between Rs (NPR) and £ (GBP). Active: ${currency}`}
           >
             <span className={currency === "NPR" ? "text-white font-black underline underline-offset-2" : "opacity-70"}>Rs</span>
@@ -129,7 +129,6 @@ export function Navbar() {
             <span className={currency === "GBP" ? "text-white font-black underline underline-offset-2" : "opacity-70"}>£</span>
           </button>
         )}
-
       </div>
 
       {/* Main navbar */}

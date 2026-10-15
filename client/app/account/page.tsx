@@ -433,12 +433,13 @@ export default function AccountPage() {
                   </h3>
 
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#706c66]">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      Member ID <span className="font-mono text-[#171512]">{memberId}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 font-medium">
+                      <span className="shrink-0">Member ID</span>
+                      <span className="min-w-0 truncate font-mono text-[#171512]">{memberId}</span>
                       <button
                         type="button"
                         onClick={handleCopyMemberId}
-                        className="text-zinc-400 hover:text-[#e94717] transition p-0.5"
+                        className="shrink-0 text-zinc-400 hover:text-[#e94717] transition p-0.5"
                         title="Copy Member ID"
                       >
                         {copiedId ? (
@@ -622,13 +623,13 @@ export default function AccountPage() {
                         <Pencil className="size-3" />
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-[#706c66]">
-                      <span>Member ID</span>
-                      <span className="font-mono text-[#171512]">{memberId}</span>
+                    <div className="flex min-w-0 items-center gap-2 text-xs text-[#706c66]">
+                      <span className="shrink-0">Member ID</span>
+                      <span className="min-w-0 truncate font-mono text-[#171512]">{memberId}</span>
                       <button
                         type="button"
                         onClick={handleCopyMemberId}
-                        className="text-zinc-400 hover:text-[#e94717]"
+                        className="shrink-0 text-zinc-400 hover:text-[#e94717]"
                         title="Copy Member ID"
                       >
                         {copiedId ? (
