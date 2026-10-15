@@ -25,10 +25,6 @@ import { adminApi, type SiteContactInfo, type ContactMessageItem } from "@/lib/a
 export function ContactManagement() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{
-    type: "success" | "error"
-    text: string
-  } | null>(null)
 
   const [activeSubTab, setActiveSubTab] = useState<"settings" | "messages">("settings")
 
@@ -56,7 +52,6 @@ export function ContactManagement() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    setStatusMessage(null)
     try {
       const data = await adminApi.contact.get()
       if (data) {
@@ -78,10 +73,7 @@ export function ContactManagement() {
       }
     } catch (err) {
       console.error("Failed to load contact info:", err)
-      setStatusMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Failed to load contact info",
-      })
+      toast.error(err instanceof Error ? err.message : "Failed to load contact info")
     } finally {
       setLoading(false)
     }
@@ -126,7 +118,6 @@ export function ContactManagement() {
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     setSaving(true)
-    setStatusMessage(null)
 
     try {
       const updated = await adminApi.contact.update(formData)
@@ -147,19 +138,10 @@ export function ContactManagement() {
           },
         })
       }
-      setStatusMessage({
-        type: "success",
-        text: "Contact & social media details updated successfully!",
-      })
-      setTimeout(() => {
-        setStatusMessage(null)
-      }, 4000)
+      toast.success("Contact & social media details updated successfully!")
     } catch (err) {
       console.error("Save error:", err)
-      setStatusMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Failed to save changes",
-      })
+      toast.error(err instanceof Error ? err.message : "Failed to save changes")
     } finally {
       setSaving(false)
     }
@@ -169,16 +151,17 @@ export function ContactManagement() {
     try {
       const updated = await adminApi.contact.messages.updateStatus(id, status)
       setMessages((prev) => prev.map((m) => (m._id === id ? updated : m)))
+      toast.success("Message status updated")
     } catch (err) {
       toast.error("Failed to update status: " + (err instanceof Error ? err.message : "Error"))
     }
   }
 
   const handleDeleteMessage = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this message?")) return
     try {
       await adminApi.contact.messages.remove(id)
       setMessages((prev) => prev.filter((m) => m._id !== id))
+      toast.success("Message deleted")
     } catch (err) {
       toast.error("Failed to delete message: " + (err instanceof Error ? err.message : "Error"))
     }
@@ -262,23 +245,6 @@ export function ContactManagement() {
         </div>
       </div>
 
-      {/* Status banner */}
-      {statusMessage && (
-        <div
-          className={`flex items-center gap-3 rounded-xl p-4 text-sm ${
-            statusMessage.type === "success"
-              ? "border border-emerald-500/30 bg-emerald-950/40 text-emerald-300"
-              : "border border-red-500/30 bg-red-950/40 text-red-300"
-          }`}
-        >
-          {statusMessage.type === "success" ? (
-            <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
-          ) : (
-            <AlertCircle className="size-5 shrink-0 text-red-400" />
-          )}
-          <span>{statusMessage.text}</span>
-        </div>
-      )}
 
       {/* Sub Tabs */}
       <div className="flex items-center gap-2 border-b border-zinc-800">

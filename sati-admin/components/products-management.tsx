@@ -107,6 +107,7 @@ export function ProductsManagement({
       setCreateOpen(false)
       resetForm()
       onUpdate()
+      toast.success("Product created successfully")
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Failed to create product")
     } finally {
@@ -129,16 +130,18 @@ export function ProductsManagement({
       })
       setEditingId(null)
       onUpdate()
+      toast.success("Product updated successfully")
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to update product")
+      toast.error(err instanceof Error ? err.message : "Failed to update product")
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(`Are you sure you want to delete product "${id}"?`)) return
     try {
       await adminApi.products.delete(id)
       onUpdate()
+      toast.success(`Product "${id}" deleted`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete")
     }

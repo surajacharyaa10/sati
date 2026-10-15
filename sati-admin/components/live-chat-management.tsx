@@ -618,20 +618,33 @@ export function LiveChatManagement() {
   const unreadTotal = sessions.reduce((acc, s) => acc + unreadCount(s), 0)
 
   async function handleReply(id: string, text: string) {
-    const updated = await adminApi.chatSessions.reply(id, text)
-    setSessions((prev) => prev.map((s) => (s._id === id ? updated : s)))
+    try {
+      const updated = await adminApi.chatSessions.reply(id, text)
+      setSessions((prev) => prev.map((s) => (s._id === id ? updated : s)))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reply")
+    }
   }
 
   async function handleStatusChange(id: string, status: ChatSession["status"]) {
-    const updated = await adminApi.chatSessions.setStatus(id, status)
-    setSessions((prev) => prev.map((s) => (s._id === id ? updated : s)))
+    try {
+      const updated = await adminApi.chatSessions.setStatus(id, status)
+      setSessions((prev) => prev.map((s) => (s._id === id ? updated : s)))
+      toast.success(`Chat marked as ${status}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update chat status")
+    }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this chat session permanently?")) return
-    await adminApi.chatSessions.remove(id)
-    setSessions((prev) => prev.filter((s) => s._id !== id))
-    if (selectedId === id) setSelectedId(null)
+    try {
+      await adminApi.chatSessions.remove(id)
+      setSessions((prev) => prev.filter((s) => s._id !== id))
+      if (selectedId === id) setSelectedId(null)
+      toast.success("Chat session deleted")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete chat session")
+    }
   }
 
   return (
