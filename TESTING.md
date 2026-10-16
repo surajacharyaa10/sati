@@ -29,6 +29,8 @@
    - 5.4 [Catalog & Product CRUD](#54-catalog--product-crud)
 6. [End-to-End (E2E) Test Scenarios (Playwright)](#6-end-to-end-e2e-test-scenarios-playwright)
 7. [Security, Fraud Prevention & Edge Cases](#7-security-fraud-prevention--edge-cases)
+   - 7.1 [Security Test Case Matrix](#71-security-test-case-matrix)
+   - 7.2 [Security Test Parameters](#72-security-test-parameters)
 8. [Performance & Load Testing](#8-performance--load-testing)
 9. [Sample Test Implementation Snippets](#9-sample-test-implementation-snippets)
 10. [CI/CD Automation Pipeline (GitHub Actions)](#10-cicd-automation-pipeline-github-actions)
@@ -317,6 +319,8 @@ The project utilizes a 3-tier testing pyramid to guarantee stability, security, 
 
 ## 7. Security, Fraud Prevention & Edge Cases
 
+### 7.1 Security Test Case Matrix
+
 | ID | Test Scenario | Expected Outcome |
 | :--- | :--- | :--- |
 | **SEC-01** | eSewa callback with altered `total_amount` | Reject with HTTP 400; signature mismatch |
@@ -327,6 +331,69 @@ The project utilizes a 3-tier testing pyramid to guarantee stability, security, 
 | **SEC-06** | Negative item price / quantity manipulation | Rejected by backend validator (HTTP 400) |
 | **SEC-07** | Special characters in delivery address (`<script>`, SQL quotes) | Sanitized properly; rendered as pure text |
 | **SEC-08** | Order status update on legacy order missing address field | Passes validation with empty default (`""`) |
+| **SEC-09** | JWT with tampered `userId` payload (manually altered claim) | `authenticate` middleware returns HTTP 401; signature invalid |
+| **SEC-10** | Brute-force login attempts (50+ rapid requests to `/api/auth/login`) | Rate limiter blocks requests after threshold; HTTP 429 Too Many Requests |
+| **SEC-11** | Cross-Origin request from unauthorized domain to `/api/*` | CORS policy rejects preflight; HTTP 403 or missing `Allow-Origin` header |
+| **SEC-12** | CSRF: Forged POST from external origin without valid same-site cookie | Cookie `SameSite=Strict/Lax` prevents cross-site token submission |
+| **SEC-13** | Mass assignment: Extra `isAdmin: true` field injected into registration body | Field stripped by schema; user not elevated to admin role |
+| **SEC-14** | Oversized payload DoS: 10 MB JSON body sent to any API endpoint | Request rejected before parsing; HTTP 413 Payload Too Large |
+| **SEC-15** | HTTP Header Injection via newline characters in `address` or `phoneNumber` | Characters stripped/escaped; no response splitting |
+| **SEC-16** | Expired JWT token (TTL elapsed) reused to access protected route | HTTP 401 Unauthorized; `authenticate` middleware rejects stale token |
+
+---
+
+### 7.2 Security Test Parameters
+
+The table below defines the exact input parameters and validation criteria to use when executing each security test case.
+
+#### Authentication & Token Security
+
+| Parameter | Type | Valid Example | Invalid / Attack Value | Validation Rule |
+| :--- | :--- | :--- | :--- | :--- |
+| `token` (JWT cookie) | `string` (HS256 JWT) | `eyJhbGci...` (signed) | Manually altered payload segment | Must pass `jwt.verify()` with server secret; reject on mismatch |
+| `token` expiry (`exp` claim) | Unix timestamp | `now + 7d` | `now - 1s` (past) | Reject tokens where `exp < Date.now() / 1000` |
+| `userId` claim | MongoDB ObjectId string | `"64f2a3b1c2d3e4f5a6b7c8d9"` | `"admin"` / `"../../../etc"` | Must match `/^[a-f\d]{24}$/i`; no elevation |
+| Admin role cookie | HTTP-only cookie | Valid admin JWT | Regular user JWT | `requireAdmin` checks `user.isAdmin === true` |
+
+#### Payment Signature & Integrity
+
+| Parameter | Type | Valid Example | Invalid / Attack Value | Validation Rule |
+| :--- | :--- | :--- | :--- | :--- |
+| eSewa `signature` | Base64 HMAC-SHA256 | `HMAC(secret, "total_amount,transaction_uuid,product_code")` | Truncated or swapped string | Must match server-computed HMAC exactly |
+| eSewa `total_amount` | `string` (number-like) | `"1500.00"` | `"0.01"` / `"-1500.00"` | Must equal order total stored in DB before callback |
+| eSewa `transaction_uuid` | UUID v4 string | `"a1b2c3d4-..."` | Duplicate UUID of prior successful payment | Must not exist in `Payment` collection (`idempotency check`) |
+| eSewa `product_code` | string | `"EPAYTEST"` | `"FAKECODE"` | Must match `.env` `ESEWA_PRODUCT_CODE` |
+| Stripe `session_id` | string `cs_test_...` | `"cs_test_abc123"` | `"cs_fake_xyz"` / empty string | Must resolve via `stripe.checkout.sessions.retrieve()`; 400 on error |
+| Stripe `metadata.orderId` | MongoDB ObjectId string | `"64f2a3b1..."` | Missing / null | Required; order must exist; HTTP 404 if absent |
+
+#### Input Sanitization & Injection
+
+| Parameter | Type | Valid Example | Attack Value | Expected Sanitization |
+| :--- | :--- | :--- | :--- | :--- |
+| `address` (delivery) | string ≤ 500 chars | `"Thamel Marg, House 24"` | `"<script>alert(1)</script>"` | HTML-encoded on render; not executed |
+| `phoneNumber` | string (E.164 / local) | `"+977 9841234567"` | `"\r\nSet-Cookie: evil=1"` | Strip `\r`, `\n`; regex validate phone pattern |
+| `status` (order update) | enum string | `"shipped"` | `"$gt"` / `"__proto__"` | Whitelist: `[pending, confirmed, shipped, delivered, cancelled]` |
+| `quantity` (cart) | integer ≥ 1 | `2` | `-1` / `0` / `9999999` | Min: 1, Max: 100 (configurable); reject outside range |
+| `price` (line item) | number > 0 | `1500.00` | `-500` / `0` | Server always recalculates from DB; never trust client price |
+| Registration `body` | JSON object | `{ name, email, password }` | `{ name, email, password, isAdmin: true }` | Mongoose schema strips unknown fields |
+
+#### Rate Limiting & DoS Prevention
+
+| Parameter | Type | Threshold | Test Method | Expected Response |
+| :--- | :--- | :--- | :--- | :--- |
+| Login attempts | requests / IP / 15 min | 10 attempts | Supertest loop × 50 | HTTP 429 after 10th failure |
+| Checkout initiation | requests / user / min | 20 | k6 script, 50 VUs | HTTP 429 with `Retry-After` header |
+| Request body size | bytes | 1 MB (default Express) | Send 10 MB JSON | HTTP 413 Payload Too Large |
+| eSewa callback flood | requests / UUID / session | 1 (idempotent) | Replay same callback × 5 | Only first processed; rest HTTP 200 no-op or 409 |
+
+#### CORS & Header Security
+
+| Header / Parameter | Expected Value | Attack Scenario | Validation |
+| :--- | :--- | :--- | :--- |
+| `Access-Control-Allow-Origin` | Configured origins only (`CLIENT_ORIGIN`) | Request from `https://evil.com` | Must not echo arbitrary `Origin`; reject or omit header |
+| `Set-Cookie` attributes | `HttpOnly; Secure; SameSite=Strict` | Cross-site POST form submission | Browser does not send cookie cross-origin |
+| `X-Content-Type-Options` | `nosniff` | MIME-type sniffing attack | Set on all API responses |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Sensitive URL leakage via `Referer` | No full URL exposed to third parties |
 
 ---
 
