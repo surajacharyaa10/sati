@@ -3,6 +3,8 @@ import '../components/app_theme.dart';
 import '../components/product_tile.dart';
 import '../services/products_service.dart';
 import '../services/wishlist_service.dart';
+import '../services/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class WomenPage extends StatefulWidget {
   const WomenPage({super.key});
@@ -19,11 +21,23 @@ class _WomenPageState extends State<WomenPage> {
   bool _loading = true;
   String? _error;
   Set<String> _savedIds = const {};
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
+    _userId = context.read<AuthProvider>().userId;
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final id = context.read<AuthProvider>().userId;
+    if (id != _userId) {
+      _userId = id;
+      _load();
+    }
   }
 
   Future<void> _load() async {

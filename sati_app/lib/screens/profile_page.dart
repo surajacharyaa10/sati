@@ -1,7 +1,11 @@
 import "package:flutter/material.dart";
+import "package:provider/provider.dart";
 import "../components/app_theme.dart";
 import "../components/profile_header.dart";
 import "../components/profile_tile.dart";
+import "../services/auth_provider.dart";
+import "../services/orders_service.dart";
+import "../services/wishlist_service.dart";
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -11,10 +15,65 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // In a real build this would come from the auth service / /api/users/me.
-  String _name = "Suraj Acharya"; // ignore: prefer_final_fields
-  String _email = "surajacharya993@gmail.com"; // ignore: prefer_final_fields
+  String _name = "Loading...";
+  String _email = "";
   String? _avatarUrl;
+  int _orders = 0;
+  int _saved = 0;
+  int _points = 0;
+  bool _loading = true;
+
+  final OrdersService _ordersService = OrdersService();
+  final WishlistService _wishlist = WishlistService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-load user-scoped stats if the logged-in user changed while this
+    // screen was already open (e.g. sign out → sign in).
+    if (context.read<AuthProvider>().userId != null) {
+      _loadStats();
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    final auth = context.read<AuthProvider>();
+    final profile = await auth.fetchProfile();
+    if (!mounted) return;
+    if (profile != null) {
+      setState(() {
+        _name = profile["name"] ?? "User";
+        _email = profile["email"] ?? "";
+        _avatarUrl = profile["avatarUrl"];
+      });
+    }
+    await _loadStats();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _loadStats() async {
+    // Order count
+    try {
+      final oRes = await _ordersService.list();
+      if (mounted && oRes.success && oRes.data is List) {
+        setState(() => _orders = (oRes.data as List).length);
+      }
+    } catch (_) {}
+
+    // Saved (wishlist) count
+    try {
+      final wRes = await _wishlist.getWishlist();
+      if (mounted && wRes.success && wRes.data is List) {
+        setState(() => _saved = (wRes.data as List).length);
+      }
+    } catch (_) {}
+  }
 
   void _editProfile() {
     Navigator.of(context).pushNamed("/edit-profile");
@@ -49,6 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _logout() {
+    context.read<AuthProvider>().logout();
     Navigator.of(context).pushReplacementNamed("/login");
   }
 
@@ -82,84 +142,86 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-        children: [
-          ProfileHeader(
-            name: _name,
-            email: _email,
-            avatarUrl: _avatarUrl,
-            orders: 12,
-            saved: 7,
-            points: 240,
-          ),
-          const SizedBox(height: 16),
-          ProfileSection(
-            title: "ACCOUNT",
-            children: [
-              ProfileTile(
-                leading: const Icon(Icons.person_outline, color: AppColors.primary),
-                title: "Edit profile",
-                subtitle: "Update your name, photo and details",
-                onTap: _editProfile,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  ProfileHeader(
+                    name: _name,
+                    email: _email,
+                    avatarUrl: _avatarUrl,
+                    orders: _orders,
+                    saved: _saved,
+                    points: _points,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileSection(
+                    title: "ACCOUNT",
+                    children: [
+                      ProfileTile(
+                        leading: const Icon(Icons.person_outline, color: AppColors.primary),
+                        title: "Edit profile",
+                        subtitle: "Update your name, photo and details",
+                        onTap: _editProfile,
+                      ),
+                      ProfileTile(
+                        leading: const Icon(Icons.location_on_outlined, color: AppColors.primary),
+                        title: "Addresses",
+                        subtitle: "Manage delivery addresses in Nepal & UK",
+                        onTap: _openAddress,
+                      ),
+                      ProfileTile(
+                        leading: const Icon(Icons.payments_outlined, color: AppColors.primary),
+                        title: "Payment methods",
+                        subtitle: "Saved cards and wallet",
+                        onTap: _openPayment,
+                      ),
+                    ],
+                  ),
+                  ProfileSection(
+                    title: "SHOP",
+                    children: [
+                      ProfileTile(
+                        leading: const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
+                        title: "Order history",
+                        subtitle: "Track and reorder your bespoke pieces",
+                        onTap: _openOrders,
+                      ),
+                      ProfileTile(
+                        leading: const Icon(Icons.favorite_border, color: AppColors.primary),
+                        title: "Saved items",
+                        showChevron: false,
+                        onTap: () => Navigator.pushNamed(context, "/saved"),
+                      ),
+                    ],
+                  ),
+                  ProfileSection(
+                    title: "PREFERENCES",
+                    children: [
+                      ProfileTile(
+                        leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                        title: "Notifications",
+                        onTap: _openNotifications,
+                      ),
+                      ProfileTile(
+                        leading: const Icon(Icons.help_outline, color: AppColors.primary),
+                        title: "Help centre",
+                        onTap: _openHelp,
+                      ),
+                      ProfileTile(
+                        leading: const Icon(Icons.headset_mic_outlined, color: AppColors.primary),
+                        title: "Contact concierge",
+                        onTap: _openContact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _SignOutTile(onTap: _logout),
+                  const SizedBox(height: 24),
+                ],
               ),
-              ProfileTile(
-                leading: const Icon(Icons.location_on_outlined, color: AppColors.primary),
-                title: "Addresses",
-                subtitle: "Manage delivery addresses in Nepal & UK",
-                onTap: _openAddress,
-              ),
-              ProfileTile(
-                leading: const Icon(Icons.payments_outlined, color: AppColors.primary),
-                title: "Payment methods",
-                subtitle: "Saved cards and wallet",
-                onTap: _openPayment,
-              ),
-            ],
-          ),
-          ProfileSection(
-            title: "SHOP",
-            children: [
-              ProfileTile(
-                leading: const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
-                title: "Order history",
-                subtitle: "Track and reorder your bespoke pieces",
-                onTap: _openOrders,
-              ),
-              ProfileTile(
-                leading: const Icon(Icons.favorite_border, color: AppColors.primary),
-                title: "Saved items",
-                showChevron: false,
-                onTap: () {},
-              ),
-            ],
-          ),
-          ProfileSection(
-            title: "PREFERENCES",
-            children: [
-              ProfileTile(
-                leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
-                title: "Notifications",
-                onTap: _openNotifications,
-              ),
-              ProfileTile(
-                leading: const Icon(Icons.help_outline, color: AppColors.primary),
-                title: "Help centre",
-                onTap: _openHelp,
-              ),
-              ProfileTile(
-                leading: const Icon(Icons.headset_mic_outlined, color: AppColors.primary),
-                title: "Contact concierge",
-                onTap: _openContact,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _SignOutTile(onTap: _logout),
-          const SizedBox(height: 24),
-        ],
-      ),
-    ),
+            ),
     );
   }
 }
@@ -171,24 +233,27 @@ class _SignOutTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.logout, color: Colors.red, size: 22),
-        title: const Text(
-          "Sign out",
-          style: TextStyle(
-            color: Colors.red,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
         ),
-        onTap: onTap,
+        child: ListTile(
+          leading: const Icon(Icons.logout, color: Colors.red, size: 22),
+          title: const Text(
+            "Sign out",
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+          onTap: onTap,
+        ),
       ),
     );
   }

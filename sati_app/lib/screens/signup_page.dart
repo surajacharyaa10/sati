@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
-import "../services/auth_service.dart";
+import "package:provider/provider.dart";
+import "../services/auth_provider.dart";
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -14,7 +15,8 @@ class _SignupPageState extends State<SignupPage> {
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
-  final _auth = AuthService();
+
+  AuthProvider get _auth => context.read<AuthProvider>();
 
   String _currency = "NPR";
   bool _obscurePass = true;
@@ -52,7 +54,7 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     setState(() => _loading = true);
-    final res = await _auth.signup(
+    final ok = await _auth.signup(
       fullName: name,
       email: email,
       currency: _currency,
@@ -62,7 +64,7 @@ class _SignupPageState extends State<SignupPage> {
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (res.success) {
+    if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFFE07A1F),
@@ -74,7 +76,7 @@ class _SignupPageState extends State<SignupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red.shade700,
-          content: Text(res.message ?? "Signup failed"),
+          content: Text(_auth.error ?? "Signup failed"),
         ),
       );
     }

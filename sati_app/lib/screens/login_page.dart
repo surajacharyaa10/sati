@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,7 +10,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthService _auth = AuthService();
+  AuthProvider get _auth => context.read<AuthProvider>();
 
   static const Color orange = Color(0xFFFF7900);
   static const Color ink = Color(0xFF222222);
@@ -85,14 +86,14 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final res = await _auth.login(
+      final ok = await _auth.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (!mounted) return;
 
-      if (res.success) {
+      if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: orange,
@@ -105,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
-            content: Text(res.message ?? 'Login failed'),
+            content: Text(_auth.error ?? 'Login failed'),
           ),
         );
       }

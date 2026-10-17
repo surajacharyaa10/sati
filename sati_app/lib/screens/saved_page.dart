@@ -1,8 +1,10 @@
 import "package:flutter/material.dart";
+import "package:provider/provider.dart";
 import "../components/app_theme.dart";
 import "../components/wishlist_tile.dart";
 import "../services/api_service.dart";
 import "../services/wishlist_service.dart";
+import "../services/auth_provider.dart";
 
 class SavedPage extends StatefulWidget {
   const SavedPage({super.key});
@@ -18,11 +20,23 @@ class _SavedPageState extends State<SavedPage> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
+    _userId = context.read<AuthProvider>().userId;
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final id = context.read<AuthProvider>().userId;
+    if (id != _userId) {
+      _userId = id;
+      _load();
+    }
   }
 
   Future<void> _load() async {

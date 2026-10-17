@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../components/bottom_nav.dart';
 import '../components/product_tile.dart';
 import '../services/products_service.dart';
 import '../services/wishlist_service.dart';
+import '../services/auth_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,11 +29,23 @@ class _HomePageState extends State<HomePage> {
   bool _loading = true;
   String? _error;
   Set<String> _savedIds = const {};
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
+    _userId = context.read<AuthProvider>().userId;
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final id = context.read<AuthProvider>().userId;
+    if (id != _userId) {
+      _userId = id;
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -150,7 +164,13 @@ class _HomePageState extends State<HomePage> {
               color: ink,
               colorBlendMode: BlendMode.srcIn,
             ),
-            onPressed: () {},
+            onPressed: () {
+              if (context.read<AuthProvider>().isLoggedIn) {
+                Navigator.pushNamed(context, '/cart');
+              } else {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
+            },
             tooltip: 'Cart',
           ),
           IconButton(
@@ -348,7 +368,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  setState(() => _selectedCategory = 'All');
+                                  Navigator.pushNamed(context, '/catalog');
                                 },
                                 style: TextButton.styleFrom(foregroundColor: orange),
                                 child: const Text('View all', style: TextStyle(fontSize: 13)),
@@ -433,10 +453,6 @@ class _HomePageState extends State<HomePage> {
             return;
           }
           if (i == 3) {
-            Navigator.pushNamed(context, '/saved');
-            return;
-          }
-          if (i == 4) {
             Navigator.pushReplacementNamed(context, '/profile');
             return;
           }
