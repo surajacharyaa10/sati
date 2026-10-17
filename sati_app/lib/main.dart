@@ -5,6 +5,9 @@ import 'screens/onboarding_page.dart';
 import 'services/app_config.dart';
 import 'screens/home_page.dart';
 import 'screens/profile_page.dart';
+import 'screens/saved_page.dart';
+import 'screens/men_page.dart';
+import 'screens/women_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +40,10 @@ class SatiApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
         '/home': (context) => const HomePage(),
+        '/men': (context) => const MenPage(),
+        '/women': (context) => const WomenPage(),
         '/profile': (context) => const ProfilePage(),
+        '/saved': (context) => const SavedPage(),
       },
     );
   }

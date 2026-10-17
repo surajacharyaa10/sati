@@ -1,6 +1,18 @@
 import "package:flutter/material.dart";
 import "../components/app_theme.dart";
 
+/// The Next.js client serves the product catalogue images under /assets/.
+/// The backend returns relative paths, so resolve them against the client
+/// origin when loading images.
+const String _imageOrigin = 'http://192.168.1.65:3000';
+
+String _resolveImageUrl(String raw) {
+  if (raw.isEmpty) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  if (raw.startsWith('/')) return '$_imageOrigin$raw';
+  return '$_imageOrigin/$raw';
+}
+
 /// A single saved/wishlist product card.
 class WishlistTile extends StatelessWidget {
   final String title;
@@ -67,7 +79,7 @@ class WishlistTile extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: Image.network(
-                    imageUrl,
+                    _resolveImageUrl(imageUrl),
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       color: Colors.grey.shade100,

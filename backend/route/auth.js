@@ -88,8 +88,8 @@ const signinHandler = async (req, res) => {
 				avatarUrl: null
 			};
 
-			startSession(res, adminUser.id);
-			return res.json({ user: publicUser(adminUser, true) });
+			const token = startSession(res, adminUser.id);
+			return res.json({ user: publicUser(adminUser, true), token });
 		}
 
 		const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+passwordHash');
@@ -97,8 +97,8 @@ const signinHandler = async (req, res) => {
 			return res.status(401).json({ error: 'Email or password is incorrect' });
 		}
 
-		startSession(res, user.id);
-		return res.json({ user: publicUser(user) });
+		const token = startSession(res, user.id);
+		return res.json({ user: publicUser(user), token });
 	} catch (error) {
 		console.error('Sign-in failed:', error);
 		return res.status(500).json({ error: 'Sign-in failed: ' + (error.message || 'Server error') });

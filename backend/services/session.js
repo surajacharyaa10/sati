@@ -29,6 +29,7 @@ export const startSession = (res, userId) => {
   });
 
   res.cookie(cookieName, token, sessionCookieOptions());
+  return token;
 };
 
 export const endSession = (res) => {
@@ -37,7 +38,12 @@ export const endSession = (res) => {
 };
 
 export const authenticate = (req, res, next) => {
-  const token = req.cookies?.[cookieName];
+  // Prefer the Bearer token (mobile clients) over the session cookie.
+  const authHeader = req.headers?.authorization;
+  let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    token = req.cookies?.[cookieName];
+  }
   if (!token) {
     return res.status(401).json({ error: 'Not signed in' });
   }
