@@ -63,7 +63,7 @@ const parseAvatar = (req, res, next) => {
 	});
 };
 
-router.post('/signin', authLimiter, async (req, res) => {
+const signinHandler = async (req, res) => {
 	const { email, password } = req.body ?? {};
 	if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
 		return res.status(400).json({ error: 'Enter your email address and password' });
@@ -73,11 +73,11 @@ router.post('/signin', authLimiter, async (req, res) => {
 		// Check for admin credentials strictly from environment variables
 		const adminUsername = process.env.ADMIN_USERNAME;
 		const adminPassword = process.env.ADMIN_PASSWORD;
-		
+
 		if (
 			adminUsername &&
 			adminPassword &&
-			email.trim().toLowerCase() === adminUsername.trim().toLowerCase() && 
+			email.trim().toLowerCase() === adminUsername.trim().toLowerCase() &&
 			password === adminPassword
 		) {
 			// Create admin user object
@@ -87,7 +87,7 @@ router.post('/signin', authLimiter, async (req, res) => {
 				email: adminUsername,
 				avatarUrl: null
 			};
-			
+
 			startSession(res, adminUser.id);
 			return res.json({ user: publicUser(adminUser, true) });
 		}
@@ -103,7 +103,11 @@ router.post('/signin', authLimiter, async (req, res) => {
 		console.error('Sign-in failed:', error);
 		return res.status(500).json({ error: 'Sign-in failed: ' + (error.message || 'Server error') });
 	}
-});
+};
+
+router.post('/signin', authLimiter, signinHandler);
+// Mobile-app compatible alias
+router.post('/login', authLimiter, signinHandler);
 
 router.get('/me', authenticate, async (req, res) => {
 	// Admin sessions use a non-ObjectId id ("admin-<timestamp>"), which would
@@ -285,6 +289,78 @@ router.get('/admin', authenticate, async (req, res) => {
 });
 
 // ─── Registration with OTP verification ─────────────────────────────────────
+
+// Mobile-app compatible alias for the OTP-based registration flow.
+router.post('/signup', async (req, res) => {
+	const { name, email, country, phoneNumber, password } = req.body ?? {};
+
+	if (typeof name !== 'string' || !name.trim()) {
+		return res.status(400).json({ error: 'Please enter your full name' });
+	}
+
+	if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+		return res.status(400).json({ error: 'Please enter a valid email address' });
+	}
+
+	const normalizedCountry = country === 'UK' ? 'UK' : 'Nepal';
+	const currency = normalizedCountry === 'UK' ? 'GBP' : 'NPR';
+
+	if (typeof phoneNumber !== 'string' || !phoneNumber.trim() || phoneNumber.trim().length < 6) {
+		return res.status(400).json({ error: 'Please enter a valid phone number' });
+	}
+
+	if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+		return res.status(400).json({ error: 'Password must be between 8 and 128 characters' });
+	}
+
+	const normalizedEmail = email.trim().toLowerCase();
+
+	// Check reserved admin username
+	if (normalizedEmail === (process.env.ADMIN_USERNAME ?? '').trim().toLowerCase()) {
+		return res.status(403).json({ error: 'That email is reserved for the admin account' });
+	}
+
+	// Check if already registered
+	const existing = await User.findOne({ email: normalizedEmail });
+	if (existing) {
+		return res.status(409).json({ error: 'An account with this email already exists' });
+	}
+
+	try {
+		// Generate 6-digit OTP
+		const otp = Math.floor(100000 + Math.random() * 900000).toString();
+		const passwordHash = await hashPassword(password);
+
+		// Remove any existing pending registration for this email
+		await Otp.deleteMany({ email: normalizedEmail });
+
+		await Otp.create({
+			email: normalizedEmail,
+			otp,
+			name: name.trim(),
+			passwordHash,
+			country: normalizedCountry,
+			phoneNumber: phoneNumber.trim(),
+			currency,
+		});
+
+		// Send email
+		await sendOtpEmail(normalizedEmail, otp, name.trim()).catch((err) => {
+			console.warn('Could not send email directly, relying on logged code:', err.message);
+		});
+
+		return res.json({
+			success: true,
+			message: `A 6-digit verification code has been sent to ${normalizedEmail}`,
+			email: normalizedEmail,
+			country: normalizedCountry,
+			currency,
+		});
+	} catch (error) {
+		console.error('Failed to initiate signup:', error);
+		return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+	}
+});
 
 router.post('/send-signup-otp', async (req, res) => {
 	const { name, email, country, phoneNumber, password } = req.body ?? {};

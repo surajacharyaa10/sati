@@ -1,0 +1,103 @@
+@ Simulator File Edit Device I/O Features Debug Window Help cs & BM F Q S © Sat17 Oct 15:25
+I —l———SEE
+iPhone 16 Pro a.
+eco | (fo)
+(ta) Explorer oe ® login_page.dart M X © main.dart M 490 &}3 g eo: iOS 18.4 ta} Keay 0
+
+\ sati sati_app > lib > screens > © login_page.dart > ...
+
+7 r
+Q \ sati_app Ql import 'package:flutter/material.dart'; : . “ts
+© assets 2 | import '../services/auth_service.dart'; 1
+® > build 3 c
+> ios
+
+. 4 class LoginPage extends StatefulWidget {
+Vv
+L@ lib 5 const LoginPage({super.key});
+Y components 6
+Ce (& app_theme.dart U 7 @override ,
+Y GOERS 8 State<LoginPage> createState() => _LoginPageState(); :
+mM a 9 } ;
+Cy home_page.d. 10
+ login_page.d... M 7
+A & onboarding_p... U 11 class _LoginPageState extends State<LoginPage> { 5
+® signup_page.... M 12 final AuthService _auth = AuthService(); Hy ,
+| bern i
+"4 . 13 .
+« Y Gans 14 static const Color orange = MColor(@xFFFF79@@) ; ,
+. & api_service.d... U 15 static const Color ink = OColor(@xFF222222);
+oz (& app_config.dart U 16 static const Color muted = MColor(@xFF777777); ':
+® auth service... U 17| static const Color borderColor = MiColor(@xFFEQEQE@) ; j 1
+3 ina 18 Welcome back
+u%  main.dart M . | :
+, 19 final _formKey = GlobalKey<FormState>();
+> linux 20 final _emailController = TextEditingController(); :
+1
+
+YY macos 21 final _passwordController = TextEditingController();
+
+Flutter 22 5
+23 | bool _isLoading = false; I
+24 bool _hidePassword = true;
+
+25 bool _rememberMe = true; 7 L
+Runner.xcworkspace 26
+
+Runner Email address
+
+Runner.xcodeproj
+
+vVvvvyv
+
+RunnerTests 27 @override
+.gitignore 28 void dispose() {
+
+I ™  surajacharya993@gmail.com
+29 _emailController.dispose(); |
+f
+
+> web
+30 _passwordController.dispose();
+
+> windows 31
+
+super.dispose(); Password
+
+.env 32 t
+
+@®* ®PGSeBQOR0 GBH TGH OA
+
+.env.example U 33
+= flutter-plugins-dep... 3. j InputDecoration _boxDecoration({ i)
+_ Y required String hint, ,
+4
+elldfeiene y required IconData icon,
+= 4
+= .metadata 374 Widget? suffixIcon,
+4
+! analysis_options.yaml 38 7 y) {
+© (pulsepecltoels M Problems Output DebugConsole Terminal Ports PostmanConsole Spell Checker a a ts x
+! pubspec.yaml M _
+© README.md To run: ; 53 =) node backend A
+. | cd sati_app 13 files changed +273 -514 source: Current &) node client A
+§ sati_app.iml flutter run — .
+Sweatmadmin sati_app/.env.example &J node sati-ad... A
+It boots to onboarding + login + home, with the white/orange SATI theme and logo|sati_app/lib/components/app_theme. dart ©) zsh sati_app A
+-gitignore throughout. sati_app/lib/main. dart +15 -81 = i
+@ README.md sati_app/lib/screens/home_page.dart + Missing Podifi...
+. One note: the i0S build still needs the engine cache restored (missing Flutter |sati_app/lib/screens/login_page.dart +33 -9 6 zsh
+¥ TESTING.md binary in ios-release). Say the word and I'll run flutter precache --ios --force|sati_app/lib/screens/onboarding_page.dart ~
+with your permission. sati_app/lib/screens/signu . .
+sati_app/lib/services/api_: Z\ Kilo Code Autocomplete has been paused. Possible 8 X
+> Outline * Crunched for 41s - done 3:21 PM + 3 more below (opt+s to si causes: your Kilo account has no remaining credits, or your
+2 tests/generated (show) . . ,
+> Timeline # recap: Built a SATI Flutter app with onboarding, login, signup, and home pages configured API key (BYOK) has reached its quota limit. Add
+wired toa backend service layer that switches between working and production 69 Kilo credits or check your API key configuration to resume
+> Dependencies via .env. Everything compiles cleanly. Next: run ‘flutter precache --ios 70
+--force’ to fix the i0S build — say the word and I'll do it. autocomplete.
+> VS Code Pokémon 2% until auto-compact
+© Source: Kilo Code: Al Coding Agent, Copilot, and Autoco... §Ada/Greaits)
+> Faah ) [@ In login_page.dart] [J
+£03 > VS Code Pets >> auto mode on (shift+tab to cycle) - « for agents ® Keyboard Sounds: Apparently you do not have 'mplayer' installed o...
+ Bmains S Be e% Launchpad @OZ\0 g Connect Noconnection Debugmycode --INSERT-- ck FunnySounds Antigravity - Settings iPhone 16 Pro (ios simulator) :Claude Code g) Background @)Prettier [8
