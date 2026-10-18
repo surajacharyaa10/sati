@@ -36,11 +36,16 @@ class ApiService {
     return h;
   }
 
+  Uri _buildUri(String endpoint) {
+    final clean = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    return Uri.parse("${AppConfig.baseUrl}$clean");
+  }
+
   Future<ApiResponse<dynamic>> post(
     String endpoint, {
     Map<String, dynamic>? body,
   }) async {
-    final uri = Uri.parse("${AppConfig.baseUrl}$endpoint");
+    final uri = _buildUri(endpoint);
     try {
       final res = await http
           .post(
@@ -60,8 +65,32 @@ class ApiService {
     }
   }
 
+  Future<ApiResponse<dynamic>> put(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    final uri = _buildUri(endpoint);
+    try {
+      final res = await http
+          .put(
+            uri,
+            headers: _headers(),
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(AppConfig.timeout);
+      return _handleResponse(res);
+    } on SocketException {
+      return ApiResponse(
+        success: false,
+        message: "No internet connection or server unreachable",
+      );
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
+    }
+  }
+
   Future<ApiResponse<dynamic>> get(String endpoint) async {
-    final uri = Uri.parse("${AppConfig.baseUrl}$endpoint");
+    final uri = _buildUri(endpoint);
     try {
       final res = await http.get(uri, headers: _headers()).timeout(AppConfig.timeout);
       return _handleResponse(res);
@@ -76,7 +105,7 @@ class ApiService {
   }
 
   Future<ApiResponse<dynamic>> delete(String endpoint) async {
-    final uri = Uri.parse("${AppConfig.baseUrl}$endpoint");
+    final uri = _buildUri(endpoint);
     try {
       final res = await http.delete(uri, headers: _headers()).timeout(AppConfig.timeout);
       return _handleResponse(res);

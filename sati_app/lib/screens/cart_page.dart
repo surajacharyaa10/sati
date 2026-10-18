@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:provider/provider.dart";
 import "../components/app_theme.dart";
+import "../components/app_image.dart";
 import "../services/cart_service.dart";
 import "../services/auth_provider.dart";
 
@@ -96,13 +97,12 @@ class _CartPageState extends State<CartPage> {
         border: Border.all(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
-      child: image.isNotEmpty
-          ? Image.network(
-              image.startsWith('http') ? image : 'http://192.168.1.65:3000/$image',
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, color: AppColors.textMuted),
-            )
-          : const Icon(Icons.image_outlined, color: AppColors.textMuted),
+      child: AppProductImage(
+        image: image,
+        width: 56,
+        height: 56,
+        fit: BoxFit.cover,
+      ),
     );
   }
 
@@ -131,119 +131,116 @@ class _CartPageState extends State<CartPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: AppColors.textMuted),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _load,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text("Retry"),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: AppColors.textMuted),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : _items.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 64,
-                            color: AppColors.textMuted,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            "Your cart is empty",
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Tap the cart icon on a product to add it here.",
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 13,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemCount: _items.length,
-                      itemBuilder: (context, index) {
-                        final item = _items[index];
-                        final id = (item['id'] ?? '') as String;
-                        final name = (item['name'] ?? '') as String;
-                        final price = item['price'];
-                        final priceStr = price is num
-                            ? "Rs. ${price.toStringAsFixed(0)}"
-                            : "$price";
-                        final qty = item['quantity'] is num
-                            ? (item['quantity'] as num).toInt()
-                            : 1;
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: ListTile(
-                            leading: _cartThumb(item: item),
-                            title: Text(
-                              name,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            subtitle: Text(
-                              "Qty. $qty",
-                              style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 12.5,
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  priceStr,
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => _remove(id, index),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _load,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
                     ),
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            )
+          : _items.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 64,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Your cart is empty",
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Tap the cart icon on a product to add it here.",
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final item = _items[index];
+                final id = (item['id'] ?? '') as String;
+                final name = (item['name'] ?? '') as String;
+                final price = item['price'];
+                final priceStr = price is num
+                    ? "Rs. ${price.toStringAsFixed(0)}"
+                    : "$price";
+                final qty = item['quantity'] is num
+                    ? (item['quantity'] as num).toInt()
+                    : 1;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: ListTile(
+                    leading: _cartThumb(item: item),
+                    title: Text(
+                      name,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Qty. $qty",
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          priceStr,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _remove(id, index),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

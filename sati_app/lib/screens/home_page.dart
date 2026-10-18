@@ -66,7 +66,9 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      final list = res.data is List ? res.data.cast<Map<String, dynamic>>() : <Map<String, dynamic>>[];
+      final list = res.data is List
+          ? res.data.cast<Map<String, dynamic>>()
+          : <Map<String, dynamic>>[];
 
       // Derive category filter options from the catalogue.
       final cats = <String>['All'];
@@ -119,7 +121,11 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final filtered = _selectedCategory == 'All'
         ? _items
-        : _items.where((p) => (p['category'] ?? '').toString() == _selectedCategory).toList();
+        : _items
+              .where(
+                (p) => (p['category'] ?? '').toString() == _selectedCategory,
+              )
+              .toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -183,7 +189,12 @@ class _HomePageState extends State<HomePage> {
               colorBlendMode: BlendMode.srcIn,
             ),
             onPressed: () {
-              Navigator.pushNamed(context, '/saved');
+              final auth = context.read<AuthProvider>();
+              Navigator.pushNamed(
+                context,
+                '/saved',
+                arguments: {'userId': auth.userId},
+              );
             },
             tooltip: 'Saved',
           ),
@@ -193,254 +204,272 @@ class _HomePageState extends State<HomePage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: muted),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _load,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: orange,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: muted),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Hero banner
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          height: 220,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF1A1A1A), Color(0xFF2C2C2C)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _load,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Hero banner
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      height: 220,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1A1A1A), Color(0xFF2C2C2C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Opacity(
+                              opacity: 0.35,
+                              child: Image.asset(
+                                'assets/images/image8.jpeg',
+                                fit: BoxFit.cover,
+                                errorBuilder: (ctx, obj, st) =>
+                                    const SizedBox(),
+                              ),
                             ),
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: Opacity(
-                                  opacity: 0.35,
-                                  child: Image.network(
-                                    'http://192.168.1.65:3000/assets/image8.jpeg',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (ctx, obj, st) => const SizedBox(),
+                          Positioned.fill(
+                            child: Padding(
+                              padding: const EdgeInsets.all(22),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: orange,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'AUTUMN / WINTER 2026',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Positioned.fill(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(22),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: orange,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Text(
-                                          'AUTUMN / WINTER 2026',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 1.5,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Crafted in Kathmandu,\nStyled Globally.',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w400,
-                                          height: 1.25,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      OutlinedButton(
-                                        onPressed: () {},
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.white,
-                                          side: const BorderSide(
-                                            color: Colors.white,
-                                            width: 1.2,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 18,
-                                            vertical: 8,
-                                          ),
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Explore Collection',
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Crafted in Kathmandu,\nStyled Globally.',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.25,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 14),
+                                  OutlinedButton(
+                                    onPressed: () => Navigator.pushNamed(context, '/catalog'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Colors.white,
+                                        width: 1.2,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 8,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Explore Collection',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                    ),
 
-                        const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                        // Categories
-                        SizedBox(
-                          height: 38,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _categories.length,
-                            separatorBuilder: (ctx, i) => const SizedBox(width: 8),
-                            itemBuilder: (context, i) {
-                              final cat = _categories[i];
-                              final isSelected = cat == _selectedCategory;
-                              return ChoiceChip(
-                                label: Text(cat),
-                                selected: isSelected,
-                                onSelected: (_) => setState(() => _selectedCategory = cat),
-                                selectedColor: orange,
-                                backgroundColor: Colors.grey.shade100,
-                                labelStyle: TextStyle(
-                                  color: isSelected ? Colors.white : ink,
-                                  fontSize: 12.5,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                side: BorderSide.none,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                              );
+                    // Categories
+                    SizedBox(
+                      height: 38,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _categories.length,
+                        separatorBuilder: (ctx, i) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final cat = _categories[i];
+                          final isSelected = cat == _selectedCategory;
+                          return ChoiceChip(
+                            label: Text(cat),
+                            selected: isSelected,
+                            onSelected: (_) =>
+                                setState(() => _selectedCategory = cat),
+                            selectedColor: orange,
+                            backgroundColor: Colors.grey.shade100,
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.white : ink,
+                              fontSize: 12.5,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            side: BorderSide.none,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Section header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Curated Pieces',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: ink,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/catalog');
                             },
+                            style: TextButton.styleFrom(
+                              foregroundColor: orange,
+                            ),
+                            child: const Text(
+                              'View all',
+                              style: TextStyle(fontSize: 13),
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                    ),
 
-                        const SizedBox(height: 20),
-
-                        // Section header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Curated Pieces',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: ink,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(context, '/catalog');
-                                },
-                                style: TextButton.styleFrom(foregroundColor: orange),
-                                child: const Text('View all', style: TextStyle(fontSize: 13)),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Product grid
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: filtered.length,
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    // Product grid
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filtered.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
                               childAspectRatio: 0.62,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 16,
                             ),
-                            itemBuilder: (context, i) {
-                              final p = filtered[i];
-                              final id = (p['id'] ?? p['_id'] ?? '') as String;
-                              return ProductTile(
-                                product: p,
-                                onTap: () {},
-                                onFavorite: () => _toggle(id),
-                              );
-                            },
-                          ),
+                        itemBuilder: (context, i) {
+                          final p = filtered[i];
+                          final id = (p['id'] ?? p['_id'] ?? '') as String;
+                          return ProductTile(
+                            product: p,
+                            onTap: () {},
+                            onFavorite: () => _toggle(id),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Brand promise banner
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: orange.withValues(alpha: 0.2),
                         ),
-
-                        const SizedBox(height: 28),
-
-                        // Brand promise banner
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E6),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: orange.withValues(alpha: 0.2),
+                      ),
+                      child: const Column(
+                        children: [
+                          Text(
+                            'SATI BESPOKE EXPERIENCE',
+                            style: TextStyle(
+                              color: orange,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                          child: const Column(
-                            children: [
-                              Text(
-                                'SATI BESPOKE EXPERIENCE',
-                                style: TextStyle(
-                                  color: orange,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                '100% Authentic Fabrications · Dedicated Concierge · Deliveries in Nepal & UK',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: ink, fontSize: 12, height: 1.4),
-                              ),
-                            ],
+                          SizedBox(height: 8),
+                          Text(
+                            '100% Authentic Fabrications · Dedicated Concierge · Deliveries in Nepal & UK',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: ink,
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 24),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(height: 24),
+                  ],
                 ),
+              ),
+            ),
       bottomNavigationBar: BottomNav(
         currentIndex: _selectedNav,
         onTap: (i) {

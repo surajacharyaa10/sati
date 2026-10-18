@@ -7,7 +7,9 @@ import "../services/wishlist_service.dart";
 import "../services/auth_provider.dart";
 
 class SavedPage extends StatefulWidget {
-  const SavedPage({super.key});
+  final String? userId;
+
+  const SavedPage({super.key, this.userId});
 
   @override
   State<SavedPage> createState() => _SavedPageState();
@@ -25,16 +27,24 @@ class _SavedPageState extends State<SavedPage> {
   @override
   void initState() {
     super.initState();
-    _userId = context.read<AuthProvider>().userId;
+    _userId = widget.userId ?? context.read<AuthProvider>().userId;
     _load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final id = context.read<AuthProvider>().userId;
-    if (id != _userId) {
-      _userId = id;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String? argId;
+    if (args is Map && args['userId'] != null) {
+      argId = args['userId'].toString();
+    } else if (args is String) {
+      argId = args;
+    }
+
+    final effectiveId = widget.userId ?? argId ?? context.read<AuthProvider>().userId;
+    if (effectiveId != null && effectiveId != _userId) {
+      _userId = effectiveId;
       _load();
     }
   }
@@ -59,7 +69,8 @@ class _SavedPageState extends State<SavedPage> {
       }
 
       // The backend returns a list of product ids (strings)
-      final ids = wRes.data is List ? wRes.data.cast<String>() : <String>[];
+      final rawList = wRes.data is List ? (wRes.data as List) : const [];
+      final ids = rawList.map((e) => e.toString()).toList();
 
       if (ids.isEmpty) {
         setState(() {
@@ -70,10 +81,13 @@ class _SavedPageState extends State<SavedPage> {
       }
 
       // Step 2: fetch each product by id
-      final futures = ids.map((id) => _fetchProduct(id));
-      final products = (await Future.wait(futures))
-          .where((p) => p != null && p["name"] != null)
-          .cast<Map<String, dynamic>>()
+      final futures = ids
+          .map<Future<Map<String, dynamic>?>>((id) => _fetchProduct(id))
+          .toList();
+      final results = await Future.wait(futures);
+      final products = results
+          .whereType<Map<String, dynamic>>()
+          .where((p) => p["name"] != null)
           .toList();
 
       setState(() {
@@ -92,7 +106,10 @@ class _SavedPageState extends State<SavedPage> {
   Future<Map<String, dynamic>?> _fetchProduct(String id) async {
     try {
       final res = await _api.get("/products/$id");
-      return res.success ? (res.data as Map<String, dynamic>) : null;
+      if (res.success && res.data is Map) {
+        return Map<String, dynamic>.from(res.data as Map);
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -201,7 +218,7 @@ class _SavedPageState extends State<SavedPage> {
                       itemCount: _items.length,
                       itemBuilder: (context, index) {
                         final p = _items[index];
-                        final id = (p["_id"] ?? "") as String;
+                        final id = (p["_id"] ?? p["id"] ?? "").toString();
                         return WishlistTile.fromMap(
                           p,
                           onTap: () {},

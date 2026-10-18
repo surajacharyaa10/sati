@@ -17,6 +17,8 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String _name = "Loading...";
   String _email = "";
+  String? _phone;
+  String _country = "";
   String? _avatarUrl;
   int _orders = 0;
   int _saved = 0;
@@ -50,6 +52,8 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _name = profile["name"] ?? "User";
         _email = profile["email"] ?? "";
+        _phone = profile["phoneNumber"];
+        _country = profile["country"] ?? "";
         _avatarUrl = profile["avatarUrl"];
       });
     }
@@ -80,7 +84,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _openSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Settings coming soon")));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Settings coming soon")));
   }
 
   void _openOrders() {
@@ -92,19 +98,27 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _openPayment() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment methods coming soon")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Payment methods coming soon")),
+    );
   }
 
   void _openNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Notification settings coming soon")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Notification settings coming soon")),
+    );
   }
 
   void _openHelp() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Help centre coming soon")));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Help centre coming soon")));
   }
 
   void _openContact() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Contact concierge coming soon")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Contact concierge coming soon")),
+    );
   }
 
   void _logout() {
@@ -135,7 +149,10 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppColors.textPrimary,
+            ),
             onPressed: _openSettings,
             tooltip: "Settings",
           ),
@@ -150,6 +167,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ProfileHeader(
                     name: _name,
                     email: _email,
+                    phone: _phone,
+                    country: _country,
                     avatarUrl: _avatarUrl,
                     orders: _orders,
                     saved: _saved,
@@ -160,19 +179,28 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: "ACCOUNT",
                     children: [
                       ProfileTile(
-                        leading: const Icon(Icons.person_outline, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.person_outline,
+                          color: AppColors.primary,
+                        ),
                         title: "Edit profile",
                         subtitle: "Update your name, photo and details",
                         onTap: _editProfile,
                       ),
                       ProfileTile(
-                        leading: const Icon(Icons.location_on_outlined, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.primary,
+                        ),
                         title: "Addresses",
                         subtitle: "Manage delivery addresses in Nepal & UK",
                         onTap: _openAddress,
                       ),
                       ProfileTile(
-                        leading: const Icon(Icons.payments_outlined, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.payments_outlined,
+                          color: AppColors.primary,
+                        ),
                         title: "Payment methods",
                         subtitle: "Saved cards and wallet",
                         onTap: _openPayment,
@@ -183,16 +211,27 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: "SHOP",
                     children: [
                       ProfileTile(
-                        leading: const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.receipt_long_outlined,
+                          color: AppColors.primary,
+                        ),
                         title: "Order history",
                         subtitle: "Track and reorder your bespoke pieces",
                         onTap: _openOrders,
                       ),
                       ProfileTile(
-                        leading: const Icon(Icons.favorite_border, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.favorite_border,
+                          color: AppColors.primary,
+                        ),
                         title: "Saved items",
-                        showChevron: false,
-                        onTap: () => Navigator.pushNamed(context, "/saved"),
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          "/saved",
+                          arguments: {
+                            'userId': context.read<AuthProvider>().userId,
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -200,17 +239,26 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: "PREFERENCES",
                     children: [
                       ProfileTile(
-                        leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.primary,
+                        ),
                         title: "Notifications",
                         onTap: _openNotifications,
                       ),
                       ProfileTile(
-                        leading: const Icon(Icons.help_outline, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.help_outline,
+                          color: AppColors.primary,
+                        ),
                         title: "Help centre",
                         onTap: _openHelp,
                       ),
                       ProfileTile(
-                        leading: const Icon(Icons.headset_mic_outlined, color: AppColors.primary),
+                        leading: const Icon(
+                          Icons.headset_mic_outlined,
+                          color: AppColors.primary,
+                        ),
                         title: "Contact concierge",
                         onTap: _openContact,
                       ),

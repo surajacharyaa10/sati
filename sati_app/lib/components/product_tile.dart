@@ -1,17 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
-
-/// The Next.js client serves the product catalogue images under /assets/.
-/// The backend returns relative paths, so resolve them against the client
-/// origin when loading images.
-const String _imageOrigin = 'http://192.168.1.65:3000';
-
-String _resolveImageUrl(String raw) {
-  if (raw.isEmpty) return raw;
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-  if (raw.startsWith('/')) return '$_imageOrigin$raw';
-  return '$_imageOrigin/$raw';
-}
+import 'app_image.dart';
 
 /// A product card used in the Men/Women collection grids.
 class ProductTile extends StatelessWidget {
@@ -77,25 +66,10 @@ class ProductTile extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: image.isNotEmpty
-                        ? Image.network(
-                            _resolveImageUrl(image),
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, obj, st) => Container(
-                              color: Colors.grey.shade100,
-                              child: const Icon(
-                                Icons.image_outlined,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey.shade100,
-                            child: const Icon(
-                              Icons.image_outlined,
-                              color: Colors.grey,
-                            ),
-                          ),
+                    child: AppProductImage(
+                      image: image,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                   if (label.isNotEmpty)
                     Positioned(

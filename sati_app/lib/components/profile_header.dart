@@ -4,6 +4,8 @@ import "../components/app_theme.dart";
 class ProfileHeader extends StatelessWidget {
   final String name;
   final String email;
+  final String? phone;
+  final String? country;
   final String? avatarUrl;
   final int orders;
   final int saved;
@@ -13,6 +15,8 @@ class ProfileHeader extends StatelessWidget {
     super.key,
     required this.name,
     required this.email,
+    this.phone,
+    this.country,
     this.avatarUrl,
     this.orders = 0,
     this.saved = 0,
@@ -97,7 +101,57 @@ class ProfileHeader extends StatelessWidget {
               fontSize: 14,
             ),
           ),
-          const SizedBox(height: 22),
+          if ((phone != null && phone!.isNotEmpty) ||
+              (country != null && country!.isNotEmpty)) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                if (phone != null && phone!.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.phone_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        phone!,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (country != null && country!.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        country!,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
 
           // Stats row
           Row(

@@ -12,6 +12,7 @@ import 'screens/men_page.dart';
 import 'screens/women_page.dart';
 import 'screens/orders_page.dart';
 import 'screens/cart_page.dart';
+import 'screens/catalog_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,7 @@ class SatiApp extends StatelessWidget {
         '/orders': (context) => const OrdersPage(),
         '/order-detail': (context) => const OrdersPage(),
         '/cart': (context) => const CartPage(),
+        '/catalog': (context) => const CatalogPage(),
         },
       ),
     );
