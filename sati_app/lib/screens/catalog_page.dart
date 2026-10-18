@@ -81,6 +81,17 @@ class _CatalogPageState extends State<CatalogPage> {
       if (args['category'] is String) {
         _selectedCategory = args['category'] as String;
       }
+      // Pre-fill the search box when arriving from the home search bar.
+      // Only honour it while the field is untouched so typing in the
+      // catalogue is not clobbered on the next dependency change.
+      if (args['searchQuery'] is String &&
+          _searchQuery.isEmpty &&
+          (args['searchQuery'] as String).isNotEmpty) {
+        setState(() {
+          _searchQuery = args['searchQuery'] as String;
+          _searchController.text = _searchQuery;
+        });
+      }
     }
     final id = context.read<AuthProvider>().userId;
     if (id != _userId) {
@@ -835,7 +846,13 @@ class _CatalogPageState extends State<CatalogPage> {
                                 final id = (p['id'] ?? p['_id'] ?? '').toString();
                                 return ProductTile(
                                   product: p,
-                                  onTap: () {},
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/product-detail',
+                                      arguments: p,
+                                    );
+                                  },
                                   onFavorite: () => _toggleWishlist(id),
                                 );
                               },

@@ -237,6 +237,13 @@ class _CartPageState extends State<CartPage> {
                         ),
                       ],
                     ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/product-detail',
+                        arguments: item,
+                      );
+                    },
                   ),
                 );
               },

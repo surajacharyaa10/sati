@@ -167,7 +167,13 @@ class _WomenPageState extends State<WomenPage> {
                         final id = (p['_id'] ?? p['id'] ?? '') as String;
                         return ProductTile(
                           product: p,
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/product-detail',
+                              arguments: p,
+                            );
+                          },
                           onFavorite: () => _toggle(id),
                         );
                       },

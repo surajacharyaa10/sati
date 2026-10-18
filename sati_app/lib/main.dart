@@ -13,6 +13,7 @@ import 'screens/women_page.dart';
 import 'screens/orders_page.dart';
 import 'screens/cart_page.dart';
 import 'screens/catalog_page.dart';
+import 'screens/product_detail_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,10 @@ class SatiApp extends StatelessWidget {
         '/order-detail': (context) => const OrdersPage(),
         '/cart': (context) => const CartPage(),
         '/catalog': (context) => const CatalogPage(),
+        '/product-detail': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return ProductDetailPage(product: args);
+        },
         },
       ),
     );

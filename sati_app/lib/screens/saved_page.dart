@@ -221,7 +221,13 @@ class _SavedPageState extends State<SavedPage> {
                         final id = (p["_id"] ?? p["id"] ?? "").toString();
                         return WishlistTile.fromMap(
                           p,
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/product-detail',
+                              arguments: p,
+                            );
+                          },
                           onRemove: () => _remove(id, index),
                         );
                       },

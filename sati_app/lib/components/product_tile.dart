@@ -94,18 +94,20 @@ class ProductTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.favorite_border,
-                        size: 20,
+Positioned(
+                      top: 4,
+                      right: 4,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.favorite,
+                          size: 24,
+                        ),
+                        color: Colors.white,
+                        onPressed: onFavorite,
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
                       ),
-                      color: Colors.white,
-                      onPressed: onFavorite,
                     ),
-                  ),
                 ],
               ),
             ),
